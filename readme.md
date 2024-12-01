@@ -1,0 +1,1 @@
+documentation soon, uses osu v1 api and discord.js to serve new ranked osu! standard maps (can be set to loved/qualified aswell)
