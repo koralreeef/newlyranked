@@ -52,6 +52,22 @@ function findDT(beatmaps) {
   return indexes;
 }
 
+const downloadFile = async (url, beatmapID) => {
+  const response = await undici.request("https:"+url);
+  // TODO: You may want to check if response.statusCode is 200 (OK).
+  const targetFile = fs.createWriteStream('./samples/'+beatmapID+'.mp3');
+  await pipeline(response.body, targetFile);
+  console.log('File downloaded!');
+}
+
+const start = async (id) => {
+    const beatmap = await api.beatmaps.getBeatmap(id);
+    //console.log(beatmap);
+    //console.log(beatmap.beatmapset.preview_url);
+    await downloadFile(beatmap.beatmapset.preview_url, beatmap.beatmapset.id);
+    return './samples/'+beatmap.beatmapset.id+'.mp3';
+}
+
 module.exports = {
   name: Events.ClientReady,
   once: true,
@@ -84,6 +100,8 @@ module.exports = {
 
           let extraString = "";
           for (let i = 0; i < sortedArray.length; i++) {
+            let filePath = await start(sortedArray);
+            const attachment = new AttachmentBuilder(filePath);   
             console.log(sortedArray);
             const beatmaps = await legacyApi.getBeatmaps({
               m: "0",
@@ -232,7 +250,7 @@ module.exports = {
           }
         }
       } catch (error) {
-          return targetChannel.send("couldn't process new map");
+          return targetChannel.send("couldn't process new map or my internet died");
       }
     }, 60001);
 

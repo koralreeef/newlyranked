@@ -125,7 +125,7 @@ module.exports = {
 
             let t = rs.date;
             let date = Date.parse(t);
-            let timestamp = Math.floor(date/1000) - (7 * 60 * 60);
+            let timestamp = Math.floor(date/1000) - (7 * 60 * 60) - (60 * 60); //remove last subtraction after dst
             
             let total = map.count_slider + map.count_normal + map.count_spinner;
             let percentage = ((rs.count300 + rs.count100 + rs.count50 + rs.countmiss));
