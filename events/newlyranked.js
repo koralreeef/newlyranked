@@ -8,6 +8,11 @@ const { hr, dt } = calcModStat;
 const undici = require('undici');
 const legacyApi = new LegacyClient(AccessToken);
 
+function sleep(delay) {
+  var start = new Date().getTime();
+  while (new Date().getTime() < start + delay);
+}
+
 function getLength(s) {
   minutes = Math.trunc(s / 60);
   seconds = Math.trunc(s - minutes * 60);
@@ -66,10 +71,10 @@ const downloadFile = async (url, beatmapID) => {
 
 const start = async (id) => {
     let api = new Client(await getAccessToken());
-    const beatmap = await api.beatmaps.getBeatmap(id);
-    console.log(beatmap.beatmapset.preview_url);
-    await downloadFile(beatmap.beatmapset.preview_url, beatmap.beatmapset.id);
-    return './samples/'+beatmap.beatmapset.id+'.mp3';
+    let beatmap = await api.beatmaps.getBeatmap(id);
+    await downloadFile(beatmap.beatmapset.preview_url, id);
+    console.log('./samples/'+id+'.mp3')
+    return './samples/'+id+'.mp3';
 }
 
 module.exports = {
@@ -96,20 +101,15 @@ module.exports = {
         if (arrayExists(beatmaps)) {
           // sort into unique beatmapset ids
           const beatmapArray = [];
-          const beatmapIDArray = [];
           for (let i = 0; i < beatmaps.length; i++) {
             if(beatmaps[i].approved == "loved" || beatmaps[i].approved == "ranked")
             beatmapArray[i] = beatmaps[i].beatmapset_id; 
-            beatmapIDArray[i] = beatmaps[i].beatmap_id; 
           }
 
           const sortedArray = beatmapArray.filter(onlyUnique);
-          const sortedIDArray = beatmapIDArray.filter(onlyUnique);
           let extraString = "";
           for (let i = 0; i < sortedArray.length; i++) {
-            //console.log(sortedArray[i])
-            let filePath = await start(sortedIDArray[i]);
-            const attachment = new AttachmentBuilder(filePath);   
+
             const beatmaps = await legacyApi.getBeatmaps({
               m: "0",
               s: sortedArray[i],
@@ -132,6 +132,9 @@ module.exports = {
             // console.log(beatmaps[topDiffIndex]);
             const mapNM = beatmaps[topDiffIndex];
             const mapHR = hrBeatmaps[topDiffIndex];
+            console.log(sortedArray[i]);
+            let filePath = await start(mapNM.beatmap_id);
+            let attachment = new AttachmentBuilder(filePath);   
             if (arrayExists(dtIndexes)) {
               bpmString = "/" + dt.bpm(mapNM.bpm);
               lengthString = "/" + getLength(dt.length(mapNM.hit_length));
@@ -256,6 +259,7 @@ module.exports = {
               });
             }
             firstMap = true;
+            sleep(3000)
           }
         }
       } catch (error) {

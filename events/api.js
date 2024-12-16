@@ -21,8 +21,8 @@ const start = async (id) => {
     const beatmap = await api.beatmaps.getBeatmap(id);
     //console.log(beatmap);
     //console.log(beatmap.beatmapset.preview_url);
-    await downloadFile(beatmap.beatmapset.preview_url, beatmap.beatmapset.id);
-    return './samples/'+beatmap.beatmapset.id+'.mp3';
+    await downloadFile(beatmap.beatmapset.preview_url, id);
+    return './samples/'+id+'.mp3';
 }
 
 const score = async (id) => {
