@@ -1,37 +1,12 @@
-const { Client } = require('osu-web.js');
 const fs = require("fs")
-const {clientSecret, clientIDv2} = require('../config.json');
 const undici = require('undici');
 const { pipeline } = require('node:stream/promises');
-const { Events, EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const { access } = require('node:fs');
+const { Events, AttachmentBuilder } = require('discord.js');
+const { Client } = require("osu-web.js");
+const { getAccessToken } = require("../helper.js");
 const regex = /^\.preview \d{1,7}/gm;
 //refresh every hour for new tokens gg
-let accessToken;
-let api;
-const client_cred = async() => {
-const url = new URL(
-    "https://osu.ppy.sh/oauth/token"
-);
-
-const headers = {
-    "Accept": "application/json",
-    "Content-Type": "application/x-www-form-urlencoded",
-};
-
-let body = "client_id="+clientIDv2+"&client_secret="+clientSecret+"&grant_type=client_credentials&scope=public";
-const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body: body,
-}).then(response => response.json());
-console.log(response.access_token);
-return response.access_token;
-}
-
-const initializeTokens = async() => {
-    accessToken = await client_cred();
-}
+let api = "";
 
 const downloadFile = async (url, beatmapID) => {
   const response = await undici.request("https:"+url);
@@ -42,6 +17,7 @@ const downloadFile = async (url, beatmapID) => {
 }
 
 const start = async (id) => {
+    api = new Client(await getAccessToken());
     const beatmap = await api.beatmaps.getBeatmap(id);
     //console.log(beatmap);
     //console.log(beatmap.beatmapset.preview_url);
@@ -49,16 +25,25 @@ const start = async (id) => {
     return './samples/'+beatmap.beatmapset.id+'.mp3';
 }
 
-setInterval(async () => {
-api = new Client(await initializeTokens());
-}, 3600001);
-
-const poo = async () => {
-    await initializeTokens();
-    api = new Client(accessToken);
+const score = async (id) => {
+    api = new Client(await getAccessToken());
+    const scores = await api.users.getUserScores(id, 'recent', {
+        query: {
+          mode: 'osu',
+          limit: 1
+        }
+      });
+    console.log(scores[0].beatmap.url)
+    console.log(scores[0].pp ?? "loved or unranked");
 }
 
-poo();
+/*
+const fart = async() => {
+    api = await client_cred();
+    await score("5645231");
+}
+*/ 
+//fart();
 module.exports = {
     name: Events.MessageCreate,
     async execute(message) {

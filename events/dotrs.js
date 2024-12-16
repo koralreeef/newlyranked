@@ -1,9 +1,9 @@
 const { Events, EmbedBuilder } = require('discord.js');
-const { LegacyClient, calcAccuracy, calcModStat  } = require('osu-web.js');
+const { Client, LegacyClient, calcAccuracy, calcModStat  } = require('osu-web.js');
 const { AccessToken } = require('../config.json');
 const { lightskyblue } = require('color-name');
 const { osuUsers } = require('../db/dbObjects.js');
-const { setBeatmapID } = require('../helper.js');
+const { setBeatmapID, getAccessToken } = require('../helper.js');
 const { hr, dt, ez, ht } = calcModStat;
 const legacyApi = new LegacyClient(AccessToken);
 
@@ -79,6 +79,7 @@ module.exports = {
         let self = false;
         if(msg === ".rs") self = true; 
         if(regex.test(msg) || self) {
+            let api = new Client(await getAccessToken());
             let usr = msg.substring(4);
             let selfName = await osuUsers.findOne({ where: {user_id: message.author.id }});
 
@@ -108,7 +109,20 @@ module.exports = {
             //console.log(getModsEnum(mod));
             const user = u;
             const map = m[0];
-
+            const v2 = await api.users.getUserScores(user.user_id, 'recent', {
+                query: {
+                  mode: 'osu',
+                  limit: 1
+                }
+              });
+            //lmoa
+            console.log(v2);
+            let pp = v2[0].pp ?? "loved";
+            let ppString = "";
+            if(pp != "loved"){
+                pp = pp.toFixed(2);
+                ppString = "|  **"+pp + "PP**  |";
+            }
             let mapCS = "CS:  "+map.diff_size;
             let mapAR = "  AR:  "+map.diff_approach.toFixed(2);
             let mapOD = "  OD:  "+map.diff_overall.toFixed(2);
@@ -145,7 +159,7 @@ module.exports = {
                 .addFields(
                     {
                         name: progress+"**   "+rs.rank+"**   |   +**"+mod+"**   |   **"+rs.maxcombo+"x/**"+map.max_combo+"x   |   **"+rs.score.toLocaleString()+"**",
-                        value: "         **"+accuracy.toFixed(2)+"%**     {"+rs.count300+" | "+rs.count100+" | "+rs.count50+" | "+rs.countmiss+"}   <t:"+timestamp+":R>",
+                        value: "**"+accuracy.toFixed(2)+"%**  "+ppString+"   {"+rs.count300+" | "+rs.count100+" | "+rs.count50+" | "+rs.countmiss+"}   <t:"+timestamp+":R>",
                         inline: false
                     },
                     {

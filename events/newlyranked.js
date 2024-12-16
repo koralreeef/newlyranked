@@ -1,7 +1,11 @@
-const { Events } = require("discord.js");
+const fs = require("fs");
+const { Events, AttachmentBuilder } = require("discord.js");
 const { AccessToken, targetThread } = require("../config.json");
-const { LegacyClient, calcModStat } = require("osu-web.js");
+const { Client, LegacyClient, calcModStat } = require("osu-web.js");
+const { getAccessToken } = require("../helper.js");
+const { pipeline } = require('node:stream/promises');
 const { hr, dt } = calcModStat;
+const undici = require('undici');
 const legacyApi = new LegacyClient(AccessToken);
 
 function getLength(s) {
@@ -61,9 +65,9 @@ const downloadFile = async (url, beatmapID) => {
 }
 
 const start = async (id) => {
+    let api = new Client(await getAccessToken());
     const beatmap = await api.beatmaps.getBeatmap(id);
-    //console.log(beatmap);
-    //console.log(beatmap.beatmapset.preview_url);
+    console.log(beatmap.beatmapset.preview_url);
     await downloadFile(beatmap.beatmapset.preview_url, beatmap.beatmapset.id);
     return './samples/'+beatmap.beatmapset.id+'.mp3';
 }
@@ -92,17 +96,20 @@ module.exports = {
         if (arrayExists(beatmaps)) {
           // sort into unique beatmapset ids
           const beatmapArray = [];
+          const beatmapIDArray = [];
           for (let i = 0; i < beatmaps.length; i++) {
             if(beatmaps[i].approved == "loved" || beatmaps[i].approved == "ranked")
             beatmapArray[i] = beatmaps[i].beatmapset_id; 
+            beatmapIDArray[i] = beatmaps[i].beatmap_id; 
           }
-          const sortedArray = beatmapArray.filter(onlyUnique);
 
+          const sortedArray = beatmapArray.filter(onlyUnique);
+          const sortedIDArray = beatmapIDArray.filter(onlyUnique);
           let extraString = "";
           for (let i = 0; i < sortedArray.length; i++) {
-            let filePath = await start(sortedArray);
+            //console.log(sortedArray[i])
+            let filePath = await start(sortedIDArray[i]);
             const attachment = new AttachmentBuilder(filePath);   
-            console.log(sortedArray);
             const beatmaps = await legacyApi.getBeatmaps({
               m: "0",
               s: sortedArray[i],
@@ -232,24 +239,27 @@ module.exports = {
                 }
               }
               // Lmao
-              targetChannel.send(
-                nmString +
+              targetChannel.send({
+                content: nmString +
                   "\n" +
                   dtString +
                   extraString +
                   dtString2 +
                   "https://osu.ppy.sh/b/" +
                   mapNM.beatmap_id,
-              );
+                  files: [attachment]
+            });
             } else if (mapNM.difficultyrating.toFixed(2) > 5.4) {
-              targetChannel.send(
-                nmString + "\n" + "https://osu.ppy.sh/b/" + mapNM.beatmap_id,
-              );
+              targetChannel.send({
+                content: nmString + "\n" + "https://osu.ppy.sh/b/" + mapNM.beatmap_id,
+                files: [attachment]
+              });
             }
             firstMap = true;
           }
         }
       } catch (error) {
+          console.log(error);
           return targetChannel.send("couldn't process new map or my internet died");
       }
     }, 60001);

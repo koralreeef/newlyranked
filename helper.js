@@ -1,7 +1,8 @@
 const { Collection } = require('discord.js');
 const { Readable } = require('stream');
 const { finished } = require('stream/promises');
-const { Users } = require('./db/dbObjects.js')
+const { Users } = require('./db/dbObjects.js');
+const { clientIDv2, clientSecret } = require("./config.json");
 const path = require("path");
 const currency = new Collection();
 const fs = require("fs");
@@ -9,7 +10,7 @@ const fs = require("fs");
 var commonSR = 60;
 var SSR = 90;
 let beatmapID = 0;
-
+let api = "";
 function getLifetime(id) {
 	const user = currency.get(id);
 	return user ? user.lifetime : 0;
@@ -29,6 +30,30 @@ async function addBalance(id, amount) {
 	return newUser;
 }
 
+const client_cred = async() => {
+	const url = new URL(
+		"https://osu.ppy.sh/oauth/token"
+	);
+	
+	const headers = {
+		"Accept": "application/json",
+		"Content-Type": "application/x-www-form-urlencoded",
+	};
+	
+	let body = "client_id="+clientIDv2+"&client_secret="+clientSecret+"&grant_type=client_credentials&scope=public";
+	const response = await fetch(url, {
+		method: "POST",
+		headers,
+		body: body,
+	}).then(response => response.json());
+	console.log("token made");
+	api = response.access_token;
+	return response.access_token;
+	}
+
+const getAccessToken = async() => {
+	return api;
+}
 function getBalance(id) {
 	const user = currency.get(id);
 	return user ? user.balance : 0;
@@ -70,4 +95,5 @@ module.exports = { currency, commonSR, SSR,
 				   getLifetime, getRandomInt, 
 				   addBalance, wipeBalance, getBalance, 
 				   getBeatmapID, setBeatmapID,
-				   downloadFile, sleep };
+				   downloadFile, sleep,
+				   client_cred, getAccessToken };
