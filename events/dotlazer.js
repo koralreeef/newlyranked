@@ -9,6 +9,7 @@ const { hr, dt, ez, ht } = calcModStat;
 const rosu = require("rosu-pp-js");
 const fs = require("fs");
 const { FAILSAFE_SCHEMA } = require('js-yaml');
+const { randomFillSync } = require('crypto');
 
 const regex = /^\.lazer \D{1,}/gm;
 const diff_increasing_mods = ['HR', 'DT', 'HT', 'EZ']
@@ -123,25 +124,43 @@ module.exports = {
                     file_path: "./maps/"+score.beatmap.id+".osu"
                 });
                 //console.log(result);
-                console.log(score);
+                //console.log(score);
                 //console.log(score.max_combo);
                 const bytes = fs.readFileSync("./maps/"+score.beatmap.id+".osu");
                 let map = new rosu.Beatmap(bytes);
                 let accuracy = score.accuracy * 100;
+                let total = score.statistics.count_100 + score.statistics.count_300 + score.statistics.count_50 + score.statistics.count_miss;
+                console.log(total);
                 // Calculating performance attributes for a HDDT SS
                 const maxAttrs = new rosu.Performance({ mods: "CL" }).calculate(map);
                 // Calculating performance attributes for a specific score.
                 
+            if(!score.passed){
+                let difficulty = new rosu.Difficulty({ mods: "CL", passedObjects: total, lazer: false });
+                // Gradually calculating *performance* attributes
+                let gradualPerf = difficulty.gradualPerformance(map);
+                const state = {
+                    maxCombo: score.max_combo,
+                    n300: score.statistics.count_300,
+                    n100: score.statistics.count_100,
+                    n50: score.statistics.count_50,
+                    misses: score.statistics.count_miss,
+                };
+                //console.log(state);
+                message.channel.send(`fail, PP: ${(gradualPerf.nth(state, total - 1)?.pp.toFixed(2))}/${(maxAttrs.pp).toFixed(2)}`);
+            } else {
                 const currAttrs = new rosu.Performance({
                     mods: "CL", // Must be the same as before in order to use the previous attributes!
                     misses: score.statistics.count_miss,
                     lazer: false,
                     accuracy: accuracy,
                     combo: score.max_combo,
+                    passedObjects: Number(total),
                 }).calculate(maxAttrs); // Re-using previous attributes to speed up the calculation.
-                console.log(score.beatmap.version);
-                message.channel.send(`PP: ${(currAttrs.pp).toFixed(2)}/${(maxAttrs.pp).toFixed(2)} | Stars: ${(maxAttrs.difficulty.stars).toFixed(2)}`);
-
+                //console.log(score.beatmap.version);
+                //console.log(currAttrs);
+                message.channel.send(`pass, PP: ${(currAttrs.pp).toFixed(2)}/${(maxAttrs.pp).toFixed(2)} | Stars: ${(maxAttrs.difficulty.stars).toFixed(2)}`);
+            }
                 // Free the beatmap manually to avoid risking memory leakage.
                 map.free();
                 fs.unlink("./maps/"+score.beatmap.id+".osu", function(err){
