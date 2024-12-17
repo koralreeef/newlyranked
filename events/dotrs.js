@@ -112,7 +112,8 @@ module.exports = {
             const v2 = await api.users.getUserScores(user.user_id, 'recent', {
                 query: {
                   mode: 'osu',
-                  limit: 1
+                  limit: 1,
+                  include_fails: true
                 }
               });
             //lmoa
