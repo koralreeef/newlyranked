@@ -75,9 +75,9 @@ function findMapStats(mapCS, mapAR, mapOD, mapBPM, mapLength, dtLength, htLength
 module.exports = {
 	name: Events.MessageCreate,
 	async execute(message) {
-        let msg = message.content;
+        let msg;
         let self = false;
-        if(msg === ".rs") self = true; 
+        if(msg === ",") self = true; 
         if(regex.test(msg) || self) {
             let api = new Client(await getAccessToken());
             let usr = msg.substring(4);

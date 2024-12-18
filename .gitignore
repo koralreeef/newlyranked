@@ -3,3 +3,5 @@ config.json
 database.sqlite
 images
 samples
+maps
+test.json
