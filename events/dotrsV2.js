@@ -249,7 +249,6 @@ module.exports = {
             let p = true;
             let offset = 1;
             let stop = false;
-            console.log(regex2.test(msg));
             if(msg.substring(3, 6) === " ~p"){
                 p = false;
                 self = true;
@@ -266,18 +265,12 @@ module.exports = {
                     usr = msg.substring(msg.indexOf(" ") + 1);
                     if(msg.substring(msg.indexOf(" ") + 1, msg.indexOf(" ") + 3) === "~p"){
                         usr = msg.substring(msg.indexOf(" ") + 4);
+                        console.log("poo "+usr);
+                        if(usr === "") usr = selfName.username;
                         p = false;
                     }
                     stop = true;
                 }
-            }
-            if(regex4.test(msg) && !stop){
-                console.log("4")
-                offset = msg.substring(3, msg.indexOf("~") - 1,);
-                self = true;
-                p = false;
-                usr = selfName.username;
-                stop = true;
             }
             if(regex2.test(msg)&& !stop){
                 console.log("2")
