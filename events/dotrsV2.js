@@ -9,10 +9,14 @@ const { hr, ez } = calcModStat;
 const rosu = require("rosu-pp-js");
 const fs = require("fs");
 const { monthsShort } = require('moment-timezone');
+const shebangCommand = require('shebang-command');
+const { RuleTester } = require('eslint');
 
 const regex = /^\.rs \D{1,}/gm;
 const regex2 = /^\.rs[0-9]+/gm
 const regex3 = /^\.rs[0-9]+ /gm;
+const regex4 = /^\.rs[0-9]+ ~p/gm;
+const regex5 = /^\.rs[0-9]+ ~p /gm;
 function getLength(s) {
 	minutes = Math.trunc(s/60);
 	seconds = Math.trunc(s - minutes*60);
@@ -237,12 +241,15 @@ module.exports = {
         let msg = message.content;
         let self = false;
         if(msg === ".rs") self = true; 
-        if(regex.test(msg) || self || regex2.test(msg) || regex3.test(msg.substring(0, msg.indexOf(" ")))) {
+        const r3 = regex3.test(msg.substring(0, msg.indexOf(" ")));
+        if(regex.test(msg) || self || regex2.test(msg) || r3) {
             let api = new Client(await getAccessToken());
             let usr = msg.substring(4);
             let selfName = await osuUsers.findOne({ where: {user_id: message.author.id }});
             let p = true;
-            let offset = 0;
+            let offset = 1;
+            let stop = false;
+            console.log(regex2.test(msg));
             if(msg.substring(3, 6) === " ~p"){
                 p = false;
                 self = true;
@@ -250,17 +257,33 @@ module.exports = {
                     self = false;
                     usr = msg.substring(7);
                 }
-            } 
-            if(regex2.test(msg)){
-                offset = msg.substring(3);
-                self = true;
             }
-            if(regex3.test(msg)){
+            if(regex3.test(msg) && !stop){
                 if(msg.substring(msg.indexOf(" "), msg.indexOf(" ") + 1) === " "){
+                    console.log("3")
                     self = false;
                     offset = msg.substring(3, msg.indexOf(" "));
                     usr = msg.substring(msg.indexOf(" ") + 1);
+                    if(msg.substring(msg.indexOf(" ") + 1, msg.indexOf(" ") + 3) === "~p"){
+                        usr = msg.substring(msg.indexOf(" ") + 4);
+                        p = false;
+                    }
+                    stop = true;
                 }
+            }
+            if(regex4.test(msg) && !stop){
+                console.log("4")
+                offset = msg.substring(3, msg.indexOf("~") - 1,);
+                self = true;
+                p = false;
+                usr = selfName.username;
+                stop = true;
+            }
+            if(regex2.test(msg)&& !stop){
+                console.log("2")
+                offset = msg.substring(3);
+                self = true;
+                usr = selfName.username;
             }
             console.log(offset);
             console.log(usr);
@@ -281,7 +304,7 @@ module.exports = {
             scores = await api.users.getUserScores(user.id, 'recent', {
                 query: {
                   mode: 'osu',
-                  offset: offset,
+                  offset: offset - 1,
                   limit: 1,
                   include_fails: p
                 }
