@@ -8,8 +8,11 @@ const { setBeatmapID, getAccessToken } = require('../helper.js');
 const { hr, ez } = calcModStat;
 const rosu = require("rosu-pp-js");
 const fs = require("fs");
+const { monthsShort } = require('moment-timezone');
 
 const regex = /^\.rs \D{1,}/gm;
+const regex2 = /^\.rs[0-9]+/gm
+const regex3 = /^\.rs[0-9]+ /gm;
 function getLength(s) {
 	minutes = Math.trunc(s/60);
 	seconds = Math.trunc(s - minutes*60);
@@ -37,6 +40,7 @@ async function calcLazerPP(score, map, total, modString) {
     })
     let adjustSettings = [];
     let clockSettings = [];
+    let dt = false;
     console.log(details);
     for(const mod of details.mods){
         if(mod.acronym === "DA"){
@@ -44,23 +48,26 @@ async function calcLazerPP(score, map, total, modString) {
             lazerMods = modString + "DA";
         }
         if(mod.acronym === "DT"){
+            dt = true;
             clockSettings = mod.settings;
-            if(clockSettings.speed_change != 1.5)
-            lazerMods = modString+" ("+clockSettings.speed_change+"x)";
         }
     }
+    if(dt){
+        if(clockSettings.speed_change != 1.5)
+        lazerMods = lazerMods+" ("+clockSettings.speed_change+"x)";
+    }
     //console.log(details);
-    //console.log(clockSettings);
-    //console.log(adjustSettings);
+    console.log(clockSettings);
+    console.log(adjustSettings);
     const cs = adjustSettings.circle_size ?? map.cs;
     const clockRate = clockSettings.speed_change ?? 1;
     const lazer_hits = {
-        ok: details.statistics.ok, 
-        great: details.statistics.great, 
-        meh: details.statistics.meh, 
-        miss: details.statistics.miss, 
-        large_tick_hit: details.statistics.large_tick_hit,
-        slider_tail_hit: details.statistics.slider_tail_hit,
+        ok: details.statistics.ok ?? 0, 
+        great: details.statistics.great ?? 0, 
+        meh: details.statistics.meh ?? 0, 
+        miss: details.statistics.miss ?? 0, 
+        large_tick_hit: details.statistics.large_tick_hit ?? 0,
+        slider_tail_hit: details.statistics.slider_tail_hit ?? 0,
     };
     const lazer_max_hits = {
         great: details.maximum_statistics.great,
@@ -88,13 +95,15 @@ async function calcLazerPP(score, map, total, modString) {
     const gradualPerf = difficulty.gradualPerformance(map);
     const state = {
         maxCombo: score.max_combo,
-        osuLargeTickHits: details.statistics.large_tick_hit,
-        sliderEndHits: details.statistics.slider_tail_hit,
-        n300: lazer_hits.great,
-        n100: lazer_hits.ok,
-        n50: lazer_hits.meh,
-        misses: lazer_hits.miss              
+        osuLargeTickHits: details.statistics.large_tick_hit ?? 0,
+        sliderEndHits: details.statistics.slider_tail_hit ?? 0,
+        n300: lazer_hits.great ?? 0,
+        n100: lazer_hits.ok ?? 0,
+        n50: lazer_hits.meh ?? 0,
+        misses: lazer_hits.miss ?? 0             
     };
+    console.log(total);
+    console.log(total - lazer_hits.ok - lazer_hits.meh - lazer_hits.miss);
     const FCAttrs = new rosu.Performance({
         mods: modString,
         clockRate: clockRate,
@@ -133,10 +142,10 @@ async function calcPP(score, map, total, modString) {
     let clockRate = 1;
     let cs = map.cs;
     const hits = {
-        ok: score.statistics.count_100,
-        great: score.statistics.count_300,
-        meh: score.statistics.count_50,
-        miss: score.statistics.count_miss,
+        ok: score.statistics.count_100 ?? 0,
+        great: score.statistics.count_300 ?? 0,
+        meh: score.statistics.count_50 ?? 0,
+        miss: score.statistics.count_miss ?? 0,
     }
     if(modString.includes("DT"))
         clockRate = 1.5;
@@ -158,10 +167,10 @@ async function calcPP(score, map, total, modString) {
             const gradualPerf = difficulty.gradualPerformance(map);
             const state = {
                 maxCombo: score.max_combo,
-                n300: hits.great,
-                n100: hits.ok,
-                n50: hits.meh,
-                misses: hits.miss             
+                n300: hits.great  ?? 0,
+                n100: hits.ok ?? 0,
+                n50: hits.meh ?? 0,
+                misses: hits.miss  ?? 0            
             };
             const FCAttrs = new rosu.Performance({
                 mods: modString, // Must be the same as before in order to use the previous attributes!
@@ -201,7 +210,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         iconURL: "https://a.ppy.sh/"+user.id
     })
     .setTitle(beatmapset.artist+" - "+beatmapset.title+" ["+beatmap.version+"] "+(blob.stats.difficulty.stars).toFixed(2)+"✰")
-    .setURL("https://osu.ppy.sh/b/"+beatmapset.id)
+    .setURL("https://osu.ppy.sh/b/"+beatmap.id)
     .setThumbnail("https://b.ppy.sh/thumb/"+beatmapset.id+"l.jpg")
     .addFields(
         {
@@ -228,11 +237,33 @@ module.exports = {
         let msg = message.content;
         let self = false;
         if(msg === ".rs") self = true; 
-        if(regex.test(msg) || self) {
+        if(regex.test(msg) || self || regex2.test(msg) || regex3.test(msg.substring(0, msg.indexOf(" ")))) {
             let api = new Client(await getAccessToken());
             let usr = msg.substring(4);
             let selfName = await osuUsers.findOne({ where: {user_id: message.author.id }});
+            let p = true;
             let offset = 0;
+            if(msg.substring(3, 6) === " ~p"){
+                p = false;
+                self = true;
+                if(msg.substring(6, 7) === " "){
+                    self = false;
+                    usr = msg.substring(7);
+                }
+            } 
+            if(regex2.test(msg)){
+                offset = msg.substring(3);
+                self = true;
+            }
+            if(regex3.test(msg)){
+                if(msg.substring(msg.indexOf(" "), msg.indexOf(" ") + 1) === " "){
+                    self = false;
+                    offset = msg.substring(3, msg.indexOf(" "));
+                    usr = msg.substring(msg.indexOf(" ") + 1);
+                }
+            }
+            console.log(offset);
+            console.log(usr);
             let user;
             if(self && selfName) 
             usr = selfName.username;
@@ -245,14 +276,19 @@ module.exports = {
             } catch (err) {
                 return message.channel.send("couldnt find user");
             }
-            const scores = await api.users.getUserScores(user.id, 'recent', {
+            let scores;
+            try{
+            scores = await api.users.getUserScores(user.id, 'recent', {
                 query: {
                   mode: 'osu',
                   offset: offset,
                   limit: 1,
-                  include_fails: true
+                  include_fails: p
                 }
               });
+            } catch (err) {
+                return message.channel.send("couldnt find score");
+            }
             if(scores.length > 0){
             let score = scores[0];
             try{
