@@ -218,7 +218,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     .setThumbnail("https://b.ppy.sh/thumb/"+beatmapset.id+"l.jpg")
     .addFields(
         {
-            name: progress+"**  "+score.rank+"**  |  +**"+modString+"**  |  **"+score.max_combo+"x/**"+blob.stats.difficulty.maxCombo+"x  |  <t:"+timestamp+":R>",
+            name: progress+"**  :regional_indicator_"+score.rank+":  |  +**"+modString+"**  |  **"+score.max_combo+"x/**"+blob.stats.difficulty.maxCombo+"x  |  <t:"+timestamp+":R>",
             value: "**"+blob.currPP+"**/"+blob.maxPP+"PP ~~("+blob.fcPP+"pp)~~ •  **"+accuracy.toFixed(2)+"%** • "+score.statistics.count_miss+" :x:",
             inline: false
         },

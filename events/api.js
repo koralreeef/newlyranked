@@ -125,6 +125,7 @@ const start = async (bID, mod) => {
     const maxPP = (maxAttrs.pp).toFixed(2);
     maxIndex = Math.floor(Number((scores.length)/10));
     console.log(maxIndex);
+    scoreArray = [];
     let scoreString = "";
     let list;
     let first = "";
