@@ -326,7 +326,7 @@ module.exports = {
                     file_path: "./maps/"+score.beatmap.id+".osu"
                 });
                 console.log(result);
-
+                setBeatmapID(score.beatmap.id);
                 const bytes = fs.readFileSync("./maps/"+score.beatmap.id+".osu");
                 let map = new rosu.Beatmap(bytes);
                 let ppData = {};
@@ -361,8 +361,11 @@ module.exports = {
                 message.channel.send({ embeds: [rsEmbed]});
                 } catch (err){
                     console.log(err);
-                    message.channel.send("no scores set in 24 hours or user hasnt used /osuset");
+                    message.channel.send("no scores set within 24 hours or user hasnt used /osuset");
                 }
+            }
+            else {
+                message.channel.send("no scores set within 24 hours");
             }
         }
     }

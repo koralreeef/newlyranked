@@ -1,5 +1,5 @@
 const { Events } = require('discord.js');
-
+const { setBeatmapID } = require('../helper.js')
 const regex = /^\.osu \d{1,7}/gm;
 
 module.exports = {
@@ -17,6 +17,7 @@ module.exports = {
         */
         if (regex.test(msg)){
             let beatmapID = msg.substring(5);
+            setBeatmapID(beatmapID);
             message.channel.send("https://osu.ppy.sh/b/"+beatmapID);
             console.log("https://osu.ppy.sh/b/"+beatmapID);
         }

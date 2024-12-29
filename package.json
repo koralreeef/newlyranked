@@ -11,7 +11,7 @@
     "ansi-regex": "^5.0.1",
     "ansi-styles": "^4.3.0",
     "argparse": "^2.0.1",
-    "axios": "^1.7.4",
+    "axios": "^1.7.9",
     "balanced-match": "^1.0.2",
     "brace-expansion": "^1.1.11",
     "callsites": "^3.1.0",
