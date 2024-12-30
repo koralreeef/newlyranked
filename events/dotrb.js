@@ -29,6 +29,7 @@ const start = async (uID) => {
   
   const result = await v2.scores.list({
     type: 'user_best',
+    mode: 'osu',
     limit: 100,
     user_id: uID,
   });
@@ -63,10 +64,10 @@ const start = async (uID) => {
     }
   }
   let rank = "";
-
+  let miss = score.statistics.miss ?? 0;
   let timestamp = Math.floor(sorted[i][1]/1000);
   scoreString = scoreString + "**#"+Number(score.index + 1)+"** "+beatmapString+"](https://osu.ppy.sh/b/"+score.beatmap_id+")**\n"+
-  "**"+score.rank+"** **"+score.pp.toFixed(2)+"PP** ("+(score.accuracy * 100).toFixed(2)+"%) [**"+score.max_combo+"x**/"+maxcombo+"] 2 :x: **+"+modString+"** <t:"+timestamp+":R>\n"; 
+  "**"+score.rank+"** **"+score.pp.toFixed(2)+"PP** ("+(score.accuracy * 100).toFixed(2)+"%) [**"+score.max_combo+"x**/"+maxcombo+"] "+miss+" :x: **+"+modString+"** <t:"+timestamp+":R>\n"; 
   }
   return scoreString;
   //console.log("this would be a new top play #"+newPlayIndex);
