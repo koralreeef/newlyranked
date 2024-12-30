@@ -1,22 +1,17 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { Client, calcAccuracy, calcModStat  } = require('osu-web.js');
 const { clientIDv2, clientSecret } = require('../config.json');
-const { lightskyblue } = require('color-name');
+const { lightskyblue, gold } = require('color-name');
 const { osuUsers } = require('../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
 const { setBeatmapID, getAccessToken } = require('../helper.js');
 const { hr, ez } = calcModStat;
 const rosu = require("rosu-pp-js");
 const fs = require("fs");
-const { monthsShort } = require('moment-timezone');
-const shebangCommand = require('shebang-command');
-const { RuleTester } = require('eslint');
 
 const regex = /^\.rs \D{1,}/gm;
 const regex2 = /^\.rs[0-9]+/gm
 const regex3 = /^\.rs[0-9]+ /gm;
-const regex4 = /^\.rs[0-9]+ ~p/gm;
-const regex5 = /^\.rs[0-9]+ ~p /gm;
 function getLength(s) {
 	minutes = Math.trunc(s/60);
 	seconds = Math.trunc(s - minutes*60);
@@ -204,21 +199,27 @@ async function calcPP(score, map, total, modString) {
         return {stats: maxAttrs, currPP: currentPP, fcPP: fcPP, maxPP: maxPP, accuracy: sc.accuracy, clockRate: clockRate, cs: cs}
     }
 }
-async function generateRs(beatmap, blob, beatmapset, user, progress, modString, score, accuracy, clockRate, cs){
+async function generateRs(beatmap, blob, beatmapset, user, progress, modString, score, accuracy, clockRate, cs, topPlayString){
     let diffValues = await findMapStats(blob, beatmap, clockRate, cs);
     let t = score.created_at;
     let date = Date.parse(t);
     let timestamp = Math.floor(date/1000); //remove last subtraction after dst
+    let embedColor = lightskyblue
+    if(topPlayString != " "){
+        embedColor = gold;
+    }
     let rsEmbed = new EmbedBuilder()
     .setAuthor({ name: "Most recent score by "+user.username+":",
+        url: "https://osu.ppy.sh/users/"+user.id,
         iconURL: "https://a.ppy.sh/"+user.id
     })
     .setTitle(beatmapset.artist+" - "+beatmapset.title+" ["+beatmap.version+"] "+(blob.stats.difficulty.stars).toFixed(2)+"✰")
+    .setDescription(topPlayString)
     .setURL("https://osu.ppy.sh/b/"+beatmap.id)
     .setThumbnail("https://b.ppy.sh/thumb/"+beatmapset.id+"l.jpg")
     .addFields(
         {
-            name: progress+"**  :regional_indicator_"+score.rank+":  |  +**"+modString+"**  |  **"+score.max_combo+"x/**"+blob.stats.difficulty.maxCombo+"x  |  <t:"+timestamp+":R>",
+            name: progress+"**"+score.rank+"**  |  +**"+modString+"**  |  **"+score.max_combo+"x/**"+blob.stats.difficulty.maxCombo+"x  |  <t:"+timestamp+":R>",
             value: "**"+blob.currPP+"**/"+blob.maxPP+"PP ~~("+blob.fcPP+"pp)~~ •  **"+accuracy.toFixed(2)+"%** • "+score.statistics.count_miss+" :x:",
             inline: false
         },
@@ -228,7 +229,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
             inline: false
         }
     )
-    .setColor(lightskyblue)
+    .setColor(embedColor)
     .setFooter({text : beatmap.status+" mapset by "+beatmapset.creator,
         iconURL: "https://a.ppy.sh/"+beatmapset.user_id 
     });
@@ -243,6 +244,12 @@ module.exports = {
         if(msg === ".rs") self = true; 
         const r3 = regex3.test(msg.substring(0, msg.indexOf(" ")));
         if(regex.test(msg) || self || regex2.test(msg) || r3) {
+            await auth.login({
+                type: 'v2',
+                client_id: clientIDv2,
+                client_secret: clientSecret,
+                cachedTokenPath: './test.json' // path to the file your auth token will be saved (to prevent osu!api spam)
+            });
             let api = new Client(await getAccessToken());
             let usr = msg.substring(4);
             let selfName = await osuUsers.findOne({ where: {user_id: message.author.id }});
@@ -325,6 +332,7 @@ module.exports = {
                     id: score.beatmap.id,
                     file_path: "./maps/"+score.beatmap.id+".osu"
                 });
+                
                 console.log(result);
                 setBeatmapID(score.beatmap.id);
                 const bytes = fs.readFileSync("./maps/"+score.beatmap.id+".osu");
@@ -352,12 +360,45 @@ module.exports = {
                 const accuracy = ppData.accuracy;
                 const cs = ppData.cs;
                 const mods = ppData.lazerMods ?? modString;
+                const best = await v2.scores.list({
+                    type: 'user_best',
+                    limit: 100,
+                    beatmap_id: score.beatmap.id,
+                    user_id: user.id,
+                  });
+                  let newScorePP = ppData.currPP;
+                  let newPlayIndex = 0;
+                  let found = false;
+                  let topPlayString = " ";
+                  best.reverse()
+                  if(best[0].pp < newScorePP){
+                  for(let i in best){
+                    if(best[i].pp > newScorePP && found == false){
+                        newPlayIndex = Math.abs(Number(i) - 100) + 1;
+                        console.log(newPlayIndex);
+                        if(beatmap.status != "ranked" && beatmap.status != "approved"){
+                            topPlayString = "__**New Top Play! (#"+newPlayIndex+") (if ranked)**__ ";
+                        } else {
+                            topPlayString = "__**New Top Play! (#"+newPlayIndex+")**__ ";
+                        }
+                        found = true;
+                    }
+                    if(newScorePP > best[best.length - 1].pp && found == false){
+                        if(beatmap.status != "ranked" || best.status != "approved"){
+                            topPlayString = "__**New Top Play! (#1!)(if ranked)**__ ";
+                        } else {
+                            topPlayString = "__**New Top Play! (#1!)**__ ";
+                        }
+                        found = true;
+                    }
+                }
+                }
                 let percentage = ppData.stats.state.n300;
                 percentage = (total / percentage) * 100
                 let progress = "@"+Math.round(percentage)+"%";
                 if(percentage == 100) progress = "";
 
-                const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs);
+                const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayString);
                 message.channel.send({ embeds: [rsEmbed]});
                 } catch (err){
                     console.log(err);

@@ -55,7 +55,7 @@ const buildEmbed = async(title, beatmap, first, index) => {
     .setThumbnail("https://b.ppy.sh/thumb/"+beatmap.beatmapset.id+"l.jpg")
     .setDescription(`\n${scoreArray[index]}`)
     .setColor(lightskyblue)
-    .setFooter({text : "  Page "+Number(index + 1)+"/"+Number(maxIndex + 1)+" • "+beatmap.status+" mapset by "+beatmap.beatmapset.creator,
+    .setFooter({text : "  Page "+Number(index + 1)+"/"+Number(maxIndex)+" • "+beatmap.status+" mapset by "+beatmap.beatmapset.creator,
         iconURL: "https://a.ppy.sh/"+beatmap.beatmapset.user_id 
     });
     return embed;
@@ -139,12 +139,12 @@ const start = async (bID, mod) => {
       let date = Date.parse(scores[i].date);
       let timestamp = Math.floor(date/1000) - (8 * 3600); //remove last subtraction after dst
       scoreString = scoreString + ("**#"+(i + 1)+"** **["+scores[i].username+"](https://osu.ppy.sh/users/"+scores[i].user_id+")**: "+score.toLocaleString()+" • **"+Number(calc.currPP).toFixed(2)+"**/"+maxPP+"PP  **+"+modString+"**\n"
-      +":regional_indicator_"+scores[i].rank.toLowerCase()+": "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" :x: • <t:"+timestamp+":R>\n");
-      count++;
+      +"**"+scores[i].rank+"** "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" :x: • <t:"+timestamp+":R>\n");
       if(count%10 == 0){
         scoreArray.push(scoreString);
         scoreString = "";
       }
+      count++;
     }
     scoreArray.push(scoreString);
     //list = scoreArray.join('\n');
@@ -164,7 +164,7 @@ module.exports = {
     async execute(message) {
         let msg = message.content;
         console.log(msg.substring(0, 5));
-        if(msg.substring(0, 5) === ".lb +"){
+        if(msg.substring(0, 5) === ".lb +" || msg === ".lb"){
             let ind = 0;
             const epoch = Date.now();
         
@@ -211,7 +211,7 @@ module.exports = {
               }
               if (m.customId === "forward" + epoch) {
                 ind++
-                if (ind == maxIndex) forward.setDisabled(true);
+                if (ind == maxIndex - 1) forward.setDisabled(true);
                 back.setDisabled(false);
                 console.log("forwards");
                 await m.update({
