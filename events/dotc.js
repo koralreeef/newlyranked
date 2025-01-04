@@ -144,6 +144,37 @@ module.exports = {
             if(percentage == 100) progress = "";
             if(mod.length == 0) mod = ['NM'];
 
+            let rank = "";
+            switch(scores[i].rank){
+                case "SSH":
+                    rank = "<:sshidden:1324402826255929407>"
+                    break;
+                case "SH":
+                    rank = "<:Srankhidden:1324397032793964636>"
+                    break;
+                case "SS":
+                    rank = "<:ssrank:1324402828340498542>"
+                    break;
+                case "S":
+                    rank = "<:srank:1324402824511098931>"
+                    break;
+                case "A":
+                    rank = "<:arank:1324402781850701824>"
+                    break;
+                case "B":
+                    rank = "<:brank:1324402783952306188>"
+                    break;
+                case "C":
+                    rank = "<:crank:1324402785843675177>"
+                    break;
+                case "D":
+                    rank = "<:drank:1324402787840426105>"
+                    break;
+                case "F":
+                    rank = "<:frank:1324404867208450068>"
+                    break;
+                }
+
             let rsEmbed = new EmbedBuilder()
                 .setAuthor({ name: "Score comparison for "+user.username+":",
                     iconURL: "https://a.ppy.sh/"+u.user_id
@@ -153,7 +184,7 @@ module.exports = {
                 .setThumbnail("https://b.ppy.sh/thumb/"+map.beatmapset_id+"l.jpg")
                 .addFields(
                     {
-                        name: progress+"**   "+rs.rank+"**   |   +**"+mod+"**   |   **"+rs.maxcombo+"x/**"+map.max_combo+"x   |   **"+rs.score.toLocaleString()+"**",
+                        name: progress+"**   "+rank+"**   |   +**"+mod+"**   |   **"+rs.maxcombo+"x/**"+map.max_combo+"x   |   **"+rs.score.toLocaleString()+"**",
                         value: "**"+accuracy.toFixed(2)+"%** | **"+rs.pp.toFixed(2)+"PP** | {"+rs.count300+" | "+rs.count100+" | "+rs.count50+" | "+rs.countmiss+"}   <t:"+timestamp+":R>",
                         inline: false
                     },

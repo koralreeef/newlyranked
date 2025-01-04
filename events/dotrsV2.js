@@ -1,11 +1,12 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events, EmbedBuilder, GuildOnboardingMode } = require('discord.js');
 const { Client, calcAccuracy, calcModStat  } = require('osu-web.js');
-const { clientIDv2, clientSecret } = require('../config.json');
-const { lightskyblue, gold } = require('color-name');
+const { clientIDv2, clientSecret, AccessToken } = require('../config.json');
+const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers } = require('../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
 const { setBeatmapID, getAccessToken } = require('../helper.js');
 const { hr, ez } = calcModStat;
+const axios = require('axios');
 const rosu = require("rosu-pp-js");
 const fs = require("fs");
 
@@ -199,28 +200,78 @@ async function calcPP(score, map, total, modString) {
         return {stats: maxAttrs, currPP: currentPP, fcPP: fcPP, maxPP: maxPP, accuracy: sc.accuracy, clockRate: clockRate, cs: cs}
     }
 }
-async function generateRs(beatmap, blob, beatmapset, user, progress, modString, score, accuracy, clockRate, cs, topPlayString){
+async function generateRs(beatmap, blob, beatmapset, user, progress, modString, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex){
+    let specialString = " ";
+    let embedColor = lightskyblue;
+    let rank = "";
+    if(topPlayIndex != 0 && globalTopIndex != 0){
+        specialString = "**__New Top Play (#"+topPlayIndex+") and Global Top #"+globalTopIndex+"!__** ";
+    }
+    else if(topPlayIndex != 0){
+        specialString = specialString + ("**__New Top Play! (#"+topPlayIndex+")__** ");
+    }
+    else if(globalTopIndex != 0){
+        specialString = specialString + ("**__Global Top #"+globalTopIndex+"!__** ");
+    }
+    if(beatmap.status != "approved" && beatmap.status != "ranked" && topPlayIndex != 0){
+        specialString = specialString + "** (if ranked) **";
+    }
+    if(topPlayIndex == 1){
+        embedColor = white;
+    }
+    else if(topPlayIndex > 0){
+        embedColor = gold;
+    }
+    switch (score.rank){
+        case "SSH":
+            rank = "<:sshidden:1324402826255929407>"
+            break;
+        case "SH":
+            rank = "<:Srankhidden:1324397032793964636>"
+            break;
+        case "SS":
+            rank = "<:ssrank:1324402828340498542>"
+            break;
+        case "S":
+            rank = "<:srank:1324402824511098931>"
+            break;
+        case "A":
+            rank = "<:arank:1324402781850701824>"
+            break;
+        case "B":
+            rank = "<:brank:1324402783952306188>"
+            break;
+        case "C":
+            rank = "<:crank:1324402785843675177>"
+            break;
+        case "D":
+            rank = "<:drank:1324402787840426105>"
+            break;
+        case "F":
+            rank = "<:frank:1324404867208450068>"
+            break;
+    }
+    console.log(specialString);
     let diffValues = await findMapStats(blob, beatmap, clockRate, cs);
     let t = score.created_at;
     let date = Date.parse(t);
+    let fcPPString = "~~("+blob.fcPP+"pp)~~";
+    if(blob.fcPP < blob.currPP)
+        fcPPString = "";
     let timestamp = Math.floor(date/1000); //remove last subtraction after dst
-    let embedColor = lightskyblue
-    if(topPlayString != " "){
-        embedColor = gold;
-    }
     let rsEmbed = new EmbedBuilder()
     .setAuthor({ name: "Most recent score by "+user.username+":",
         url: "https://osu.ppy.sh/users/"+user.id,
         iconURL: "https://a.ppy.sh/"+user.id
     })
     .setTitle(beatmapset.artist+" - "+beatmapset.title+" ["+beatmap.version+"] "+(blob.stats.difficulty.stars).toFixed(2)+"✰")
-    .setDescription(topPlayString)
+    .setDescription(specialString)
     .setURL("https://osu.ppy.sh/b/"+beatmap.id)
     .setThumbnail("https://b.ppy.sh/thumb/"+beatmapset.id+"l.jpg")
     .addFields(
         {
-            name: progress+"**"+score.rank+"**  |  +**"+modString+"**  |  **"+score.max_combo+"x/**"+blob.stats.difficulty.maxCombo+"x  |  <t:"+timestamp+":R>",
-            value: "**"+blob.currPP+"**/"+blob.maxPP+"PP ~~("+blob.fcPP+"pp)~~ •  **"+accuracy.toFixed(2)+"%** • "+score.statistics.count_miss+" :x:",
+            name: progress+" "+rank+" +**"+modString+"**  |  **"+score.max_combo+"x/**"+blob.stats.difficulty.maxCombo+"x  |  <t:"+timestamp+":R>",
+            value: "**"+blob.currPP+"**/"+blob.maxPP+"PP "+fcPPString+" •  **"+accuracy.toFixed(2)+"%** • "+score.statistics.count_miss+" <:miss:1324410432450068555>",
             inline: false
         },
         {
@@ -333,7 +384,7 @@ module.exports = {
                     file_path: "./maps/"+score.beatmap.id+".osu"
                 });
                 
-                console.log(result);
+                //console.log(result);
                 setBeatmapID(score.beatmap.id);
                 const bytes = fs.readFileSync("./maps/"+score.beatmap.id+".osu");
                 let map = new rosu.Beatmap(bytes);
@@ -359,6 +410,10 @@ module.exports = {
                 const clockRate = ppData.clockRate;
                 const accuracy = ppData.accuracy;
                 const cs = ppData.cs;
+                let global = [];
+                let foundPP = false;
+                let foundTop = false;
+                let globalTopIndex = 0;
                 const mods = ppData.lazerMods ?? modString;
                 const best = await v2.scores.list({
                     type: 'user_best',
@@ -366,30 +421,42 @@ module.exports = {
                     beatmap_id: score.beatmap.id,
                     user_id: user.id,
                   });
+                  if(beatmap.status == "ranked" || best.status == "approved"){
+                  const res = await axios.get("https://osu.ppy.sh/api/get_scores?k="+AccessToken+"&b="+score.beatmap.id+"&limit=50");
+                  global = res.data;
+                  global.reverse();
+                  console.log(res.data)
+                  if(score.score == global[global.length - 1].score){
+                    console.log(score.score);
+                    globalTopIndex = 1;
+                  }
+                  else if(score.score < global[0].score){
+                    console.log(score.score+" < "+global[0].score);
+                    globalTopIndex = 0;
+                  } else {
+                    for(let i in global){
+                      if(global[i].score > score.score && foundTop == false){
+                        globalTopIndex = Math.abs(Number(i) - 51);
+                        console.log(global[i].score+" "+score.score);
+                        foundTop = true;
+                      }
+                    }
+                  }
+                  }
                   let newScorePP = ppData.currPP;
-                  let newPlayIndex = 0;
-                  let found = false;
-                  let topPlayString = " ";
+                  let topPlayIndex = 0;
                   best.reverse()
                   if(best[0].pp < newScorePP){
+                    if(newScorePP > best[best.length - 1].pp && foundPP == false){
+                        topPlayIndex = 1;
+                        foundPP = true;
+                    } else {
                   for(let i in best){
-                    if(best[i].pp > newScorePP && found == false){
-                        newPlayIndex = Math.abs(Number(i) - 100) + 1;
-                        console.log(newPlayIndex);
-                        if(beatmap.status != "ranked" && beatmap.status != "approved"){
-                            topPlayString = "__**New Top Play! (#"+newPlayIndex+") (if ranked)**__ ";
-                        } else {
-                            topPlayString = "__**New Top Play! (#"+newPlayIndex+")**__ ";
-                        }
-                        found = true;
+                    if(best[i].pp > newScorePP && foundPP == false){
+                        topPlayIndex = Math.abs(Number(i) - 100);
+                        console.log(topPlayIndex);
+                        foundPP = true;
                     }
-                    if(newScorePP > best[best.length - 1].pp && found == false){
-                        if(beatmap.status != "ranked" || best.status != "approved"){
-                            topPlayString = "__**New Top Play! (#1!)(if ranked)**__ ";
-                        } else {
-                            topPlayString = "__**New Top Play! (#1!)**__ ";
-                        }
-                        found = true;
                     }
                 }
                 }
@@ -398,7 +465,7 @@ module.exports = {
                 let progress = "@"+Math.round(percentage)+"%";
                 if(percentage == 100) progress = "";
 
-                const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayString);
+                const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex);
                 message.channel.send({ embeds: [rsEmbed]});
                 } catch (err){
                     console.log(err);

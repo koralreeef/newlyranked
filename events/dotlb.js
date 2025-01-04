@@ -1,24 +1,16 @@
 const fs = require("fs")
-const undici = require('undici');
-const { pipeline } = require('node:stream/promises');
 const { Events, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
-const { Client, LegacyClient, calcAccuracy, calcModStat } = require("osu-web.js");
+const { Client, calcAccuracy  } = require("osu-web.js");
 const { lightskyblue } = require('color-name');
-const { getAccessToken, client_cred, getBeatmapID } = require("../helper.js");
+const { getBeatmapID } = require("../helper.js");
 const { clientIDv2, clientSecret, AccessToken } = require("../config.json")
 const { tools, v2, auth } = require('osu-api-extended')
-const { hr, ez } = calcModStat;
-const regex = /^\.preview \d{1,7}/gm;
+const { osuUsers } = require('../db/dbObjects.js');
 const axios = require('axios');
 const rosu = require("rosu-pp-js");
-const legacyApi = new LegacyClient(AccessToken);
 //refresh every hour for new tokens gg
 let scoreArray = [];
 let maxIndex = 0;
-function sleep(delay) {
-  var start = new Date().getTime();
-  while (new Date().getTime() < start + delay);
-}
 
 async function calcPP(score, modString, maxAttrs) {
   const hits = {
@@ -61,7 +53,7 @@ const buildEmbed = async(title, beatmap, first, index) => {
     return embed;
 }
 
-const start = async (bID, mod) => {
+const start = async (bID, mod, name) => {
   console.log(bID+" asdcasd");
     const url = new URL(
       "https://osu.ppy.sh/oauth/token"
@@ -123,29 +115,75 @@ const start = async (bID, mod) => {
     const scores = res.data;
     const maxAttrs = new rosu.Performance({ mods: modString, lazer: false }).calculate(map);
     const maxPP = (maxAttrs.pp).toFixed(2);
-    maxIndex = Math.floor(Number((scores.length)/10));
+    maxIndex = Math.round(Number((scores.length)/10));
     console.log(maxIndex);
     scoreArray = [];
     let scoreString = "";
     let list;
     let first = "";
     let count = 1;
+    let userScore = "";
     //console.log(maxAttrs);
     for(let i = 0; i < scores.length; i++){
       if(i == 0)
       first = scores[i].user_id;
+
+      let rank = "";
+      let test = scores[i].rank
+      switch (scores[i].rank){
+        case "SSH":
+            rank = "<:sshidden:1324402826255929407>"
+            break;
+        case "SH":
+            rank = "<:Srankhidden:1324397032793964636>"
+            break;
+        case "SS":
+            rank = "<:ssrank:1324402828340498542>"
+            break;
+        case "S":
+            rank = "<:srank:1324402824511098931>"
+            break;
+        case "A":
+            rank = "<:arank:1324402781850701824>"
+            break;
+        case "B":
+            rank = "<:brank:1324402783952306188>"
+            break;
+        case "C":
+            rank = "<:crank:1324402785843675177>"
+            break;
+        case "D":
+            rank = "<:drank:1324402787840426105>"
+            break;
+        case "F":
+            rank = "<:frank:1324404867208450068>"
+            break;
+      }
+      console.log(test+" "+rank);
       const calc = await calcPP(scores[i], modString, maxAttrs);
       const score = Number(scores[i].score);
       let date = Date.parse(scores[i].date);
       let timestamp = Math.floor(date/1000) - (8 * 3600); //remove last subtraction after dst
+      if(scores[i].username === name){
+      scoreString = scoreString + ("**#"+(i + 1)+"** **__["+scores[i].username+"](https://osu.ppy.sh/users/"+scores[i].user_id+")__**: "+score.toLocaleString()+" • **"+Number(calc.currPP).toFixed(2)+"**/"+maxPP+"PP  **+"+modString+"**\n"
+      +"**"+rank+"** "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" <:miss:1324410432450068555> • <t:"+timestamp+":R>\n");
+      userScore = "**#"+(i + 1)+"** **__["+scores[i].username+"](https://osu.ppy.sh/users/"+scores[i].user_id+")__**: "+score.toLocaleString()+" • **"+Number(calc.currPP).toFixed(2)+"**/"+maxPP+"PP  **+"+modString+"**\n"
+      +"**"+rank+"** "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" <:miss:1324410432450068555> • <t:"+timestamp+":R>\n";
+      } else {
       scoreString = scoreString + ("**#"+(i + 1)+"** **["+scores[i].username+"](https://osu.ppy.sh/users/"+scores[i].user_id+")**: "+score.toLocaleString()+" • **"+Number(calc.currPP).toFixed(2)+"**/"+maxPP+"PP  **+"+modString+"**\n"
-      +"**"+scores[i].rank+"** "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" :x: • <t:"+timestamp+":R>\n");
+      +"**"+rank+"** "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" <:miss:1324410432450068555> • <t:"+timestamp+":R>\n");
+      }
       if(count%10 == 0){
+        if(!scoreString.includes(userScore))
+        scoreString = scoreString + "\n__**"+name+"'s score:**__ \n"+userScore;
         scoreArray.push(scoreString);
         scoreString = "";
       }
       count++;
     }
+    //idk how to combine the two conditions lol
+    if(!scoreString.includes(userScore))
+    scoreString = scoreString + "\n__**"+name+"'s score:**__ \n"+userScore;
     scoreArray.push(scoreString);
     //list = scoreArray.join('\n');
     let title = "Leaderboard for "+beatmap.beatmapset.artist+" - "+beatmap.beatmapset.title+" ["+beatmap.version+"]["+maxAttrs.difficulty.stars.toFixed(2)+"✰] +"+modString;
@@ -185,7 +223,12 @@ module.exports = {
             const row2 = new ActionRowBuilder()
             .addComponents(back, forward);
 
-            const sorted = await start(getBeatmapID(), msg.substring(5));
+            const n = await osuUsers.findOne({ where: {user_id: message.author.id }});
+            let name = "";
+            if(n){
+              name = n.username;
+            }
+            const sorted = await start(getBeatmapID(), msg.substring(5), name);
             const embed = await buildEmbed(sorted.title, sorted.beatmap, sorted.first, ind);
             const msgRef = await message.channel.send({embeds: [embed],
                                   components: [row] 

@@ -8,7 +8,7 @@ const { v2, auth } = require('osu-api-extended')
 
 const buildEmbed = async (embedString, user) => {
     let rbEmbed = new EmbedBuilder()
-    .setAuthor({ name: "Most recent scores in "+user.username+"'s Top 100: ",
+    .setAuthor({ name: "Most recent scores in "+user.username+"'s top 100: ",
         url: "https://osu.ppy.sh/users/"+user.id,
         iconURL: "https://a.ppy.sh/"+user.id
     })
@@ -20,7 +20,7 @@ const buildEmbed = async (embedString, user) => {
 }
 
 const start = async (uID) => {
-    await auth.login({
+  await auth.login({
       type: 'v2',
       client_id: clientIDv2,
       client_secret: clientSecret,
@@ -33,44 +33,75 @@ const start = async (uID) => {
     limit: 100,
     user_id: uID,
   });
+
   let scoreArray = new Map();
   let scoreString = "";
 
   for(let i in result){
-  let date = Date.parse(result[i].ended_at);
-  scoreArray.set(result[i], date);
+    let date = Date.parse(result[i].ended_at);
+    scoreArray.set(result[i], date);
   }
 
   const sorted = [...scoreArray].sort((a, b) => b[1] - a[1]);
 
-  for(let i = 0; i < 10; i++){
-  let score = sorted[i][0];
-  let maxcombo = score.maximum_statistics.great + score.maximum_statistics.legacy_combo_increase; 
-  let modString = "";
+  for(let i = 0; i < 5; i++){
+    const score = sorted[i][0];
+    const maxcombo = score.maximum_statistics.great + score.maximum_statistics.legacy_combo_increase; 
+    let modString = "";
+    let beatmapString = "**["+score.beatmapset.artist+" - "+score.beatmapset.title+" ["+score.beatmap.version+"]";
+    let diffString = score.beatmap.version;
+    const miss = score.statistics.miss ?? 0;
+    let rank = ""; //implement custom emojiz
+    const timestamp = Math.floor(sorted[i][1]/1000);
 
-  for(let mod in score.mods){
-    modString = modString + score.mods[mod].acronym;
-  }
-  let beatmapString = "**["+score.beatmapset.artist+" - "+score.beatmapset.title+" ["+score.beatmap.version+"]";
-  let diffString = score.beatmap.version;
-  if(beatmapString.length > 50){
-    if(diffString.length > 20){
-      diffString = diffString.substring(0, 17) + "...";
-      beatmapString = "**["+score.beatmapset.artist+" - "+score.beatmapset.title+" ["+diffString+"]";
+    for(let mod in score.mods){
+      modString = modString + score.mods[mod].acronym;
     }
-    beatmapString = "**["+score.beatmapset.title+" ["+diffString+"]";
+
     if(beatmapString.length > 50){
-      beatmapString = "**["+score.beatmapset.title.substring(0, 25)+"... ["+diffString+"]";
+      if(diffString.length > 20){
+        diffString = diffString.substring(0, 17) + "...";
+        beatmapString = "**["+score.beatmapset.artist+" - "+score.beatmapset.title+" ["+diffString+"]";
+      }
+      beatmapString = "**["+score.beatmapset.title+" ["+diffString+"]";
+      if(beatmapString.length > 50){
+        beatmapString = "**["+score.beatmapset.title.substring(0, 25)+"... ["+diffString+"]";
+      }
     }
+    switch(score.rank){
+      case "SSH":
+          rank = "<:sshidden:1324402826255929407>"
+          break;
+      case "SH":
+          rank = "<:Srankhidden:1324397032793964636>"
+          break;
+      case "SS":
+          rank = "<:ssrank:1324402828340498542>"
+          break;
+      case "S":
+          rank = "<:srank:1324402824511098931>"
+          break;
+      case "A":
+          rank = "<:arank:1324402781850701824>"
+          break;
+      case "B":
+          rank = "<:brank:1324402783952306188>"
+          break;
+      case "C":
+          rank = "<:crank:1324402785843675177>"
+          break;
+      case "D":
+          rank = "<:drank:1324402787840426105>"
+          break;
+      case "F":
+          rank = "<:frank:1324404867208450068>"
+          break;
+      }
+    scoreString = scoreString + "**#"+Number(score.index + 1)+"** "+beatmapString+"](https://osu.ppy.sh/b/"+score.beatmap_id+")**\n"+
+    "**"+rank+"** **"+score.pp.toFixed(2)+"PP** ("+(score.accuracy * 100).toFixed(2)+"%) [**"+score.max_combo+"x**/"+maxcombo+"] "+miss+" <:miss:1324410432450068555> **+"+modString+"** <t:"+timestamp+":R>\n"; 
   }
-  let rank = "";
-  let miss = score.statistics.miss ?? 0;
-  let timestamp = Math.floor(sorted[i][1]/1000);
-  scoreString = scoreString + "**#"+Number(score.index + 1)+"** "+beatmapString+"](https://osu.ppy.sh/b/"+score.beatmap_id+")**\n"+
-  "**"+score.rank+"** **"+score.pp.toFixed(2)+"PP** ("+(score.accuracy * 100).toFixed(2)+"%) [**"+score.max_combo+"x**/"+maxcombo+"] "+miss+" :x: **+"+modString+"** <t:"+timestamp+":R>\n"; 
-  }
+
   return scoreString;
-  //console.log("this would be a new top play #"+newPlayIndex);
 }
 
 const regex = /^\.rb \D{1,}/gm;
