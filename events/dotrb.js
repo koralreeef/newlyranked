@@ -4,7 +4,10 @@ const { lightskyblue } = require('color-name');
 const { clientIDv2, clientSecret, AccessToken } = require("../config.json");
 const { getAccessToken } = require('../helper.js');
 const { osuUsers } = require('../db/dbObjects.js');
-const { v2, auth } = require('osu-api-extended')
+const rosu = require("rosu-pp-js");
+const { tools, v2, auth } = require('osu-api-extended')
+const fs = require("fs");
+
 
 const buildEmbed = async (embedString, user) => {
     let rbEmbed = new EmbedBuilder()
@@ -46,6 +49,7 @@ const start = async (uID) => {
 
   for(let i = 0; i < 5; i++){
     const score = sorted[i][0];
+    //console.log(score);
     const maxcombo = score.maximum_statistics.great + score.maximum_statistics.legacy_combo_increase; 
     let modString = "";
     let beatmapString = "**["+score.beatmapset.artist+" - "+score.beatmapset.title+" ["+score.beatmap.version+"]";
@@ -55,8 +59,34 @@ const start = async (uID) => {
     const timestamp = Math.floor(sorted[i][1]/1000);
 
     for(let mod in score.mods){
-      modString = modString + score.mods[mod].acronym;
+      //ehhhhh
+      if(score.mods[mod].acronym == "CL"){
+        modString = modString + "CL";
+      } else {
+      modString = score.mods[mod].acronym + modString;
+      }
     }
+    const result = await tools.download_beatmaps({
+      type: 'difficulty',
+      host: 'osu',
+      id: score.beatmap.id,
+      file_path: "./maps/"+score.beatmap.id+".osu"
+    });
+
+    const bytes = fs.readFileSync("./maps/"+score.beatmap.id+".osu");
+    let map = new rosu.Beatmap(bytes);
+    const maxAttrs = new rosu.Performance({ 
+        mods: modString,
+        cs: map.cs, 
+        od: map.od,
+        ar: map.ar 
+     }).calculate(map);
+    //console.log(maxAttrs.difficulty.stars);
+    const stars = (maxAttrs.difficulty.stars).toFixed(2);
+    map.free();
+    fs.unlink("./maps/"+score.beatmap.id+".osu", function(err){
+        console.log(err);
+    });
 
     if(beatmapString.length > 50){
       if(diffString.length > 20){
@@ -97,7 +127,7 @@ const start = async (uID) => {
           rank = "<:frank:1324404867208450068>"
           break;
       }
-    scoreString = scoreString + "**#"+Number(score.index + 1)+"** "+beatmapString+"](https://osu.ppy.sh/b/"+score.beatmap_id+")**\n"+
+    scoreString = scoreString + "**#"+Number(score.index + 1)+"** "+beatmapString+"](https://osu.ppy.sh/b/"+score.beatmap_id+") ["+stars+"✰]**\n"+
     "**"+rank+"** **"+score.pp.toFixed(2)+"PP** ("+(score.accuracy * 100).toFixed(2)+"%) [**"+score.max_combo+"x**/"+maxcombo+"] "+miss+" <:miss:1324410432450068555> **+"+modString+"** <t:"+timestamp+":R>\n"; 
   }
 
