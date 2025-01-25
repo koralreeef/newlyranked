@@ -13,6 +13,7 @@ const fs = require("fs");
 const regex = /^\.rs \D{1,}/gm;
 const regex2 = /^\.rs[0-9]+/gm
 const regex3 = /^\.rs[0-9]+ /gm;
+
 function getLength(s) {
 	minutes = Math.trunc(s/60);
 	seconds = Math.trunc(s - minutes*60);
@@ -330,13 +331,15 @@ module.exports = {
                     stop = true;
                 }
             }
+            //idk why this actually makes the check function lol
+            console.log(regex2.test(msg));
             if(regex2.test(msg)&& !stop){
                 console.log("2")
                 offset = msg.substring(3);
                 self = true;
                 usr = selfName.username;
             }
-            console.log(offset);
+            //console.log(offset);
             console.log(usr);
             let user;
             if(self && selfName) 
@@ -421,13 +424,13 @@ module.exports = {
                     beatmap_id: score.beatmap.id,
                     user_id: user.id,
                   });
-                  if(beatmap.status == "ranked" || best.status == "approved"){
+                  if(beatmap.status == "ranked" || best.status == "approved" || beatmap.status == "loved"){
                   const res = await axios.get("https://osu.ppy.sh/api/get_scores?k="+AccessToken+"&b="+score.beatmap.id+"&limit=50");
                   global = res.data;
                   global.reverse();
-                  console.log(res.data)
+                  //console.log(res.data)
                   if(score.score == global[global.length - 1].score){
-                    console.log(score.score);
+                    //console.log(score.score);
                     globalTopIndex = 1;
                   }
                   else if(score.score < global[0].score){
@@ -437,7 +440,7 @@ module.exports = {
                     for(let i in global){
                       if(global[i].score > score.score && foundTop == false){
                         globalTopIndex = Math.abs(Number(i) - 51);
-                        console.log(global[i].score+" "+score.score);
+                        //console.log(global[i].score+" "+score.score);
                         foundTop = true;
                       }
                     }
@@ -453,7 +456,8 @@ module.exports = {
                     } else {
                   for(let i in best){
                     if(best[i].pp > newScorePP && foundPP == false){
-                        topPlayIndex = Math.abs(Number(i) - 100);
+                        //so bad
+                        topPlayIndex = Math.abs(Number(i) - 101);
                         console.log(topPlayIndex);
                         foundPP = true;
                     }
