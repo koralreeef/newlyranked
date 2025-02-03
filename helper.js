@@ -48,6 +48,7 @@ const client_cred = async() => {
 	}).then(response => response.json());
 	console.log("token made");
 	api = response.access_token;
+	console.log(api);
 	return response.access_token;
 	}
 

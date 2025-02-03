@@ -248,13 +248,14 @@ module.exports = {
                   dtString +
                   extraString +
                   dtString2 +
-                  "https://osu.ppy.sh/b/" +
+                  "\ndirect download: https://osu.ppy.sh/beatconnect.io/b/" + mapNM.beatmap_id + 
+                  "\n" + "https://osu.ppy.sh/b/" +
                   mapNM.beatmap_id,
                   files: [attachment]
             });
             } else if (mapNM.difficultyrating.toFixed(2) > 5.4) {
               targetChannel.send({
-                content: nmString + "\n" + "https://osu.ppy.sh/b/" + mapNM.beatmap_id,
+                content: nmString + "\ndirect download: https://osu.ppy.sh/beatconnect.io/b/"+mapNM.beatmap_id+"\n" + "https://osu.ppy.sh/b/" + mapNM.beatmap_id,
                 files: [attachment]
               });
             }

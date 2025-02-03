@@ -211,6 +211,9 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     else if(topPlayIndex != 0){
         specialString = specialString + ("**__New Top Play! (#"+topPlayIndex+")__** ");
     }
+    else if(globalTopIndex != 0 && score.rank == "F"){
+        specialString = specialString + ("**__Global Top #"+globalTopIndex+"__ (if passed)** ");
+    }
     else if(globalTopIndex != 0){
         specialString = specialString + ("**__Global Top #"+globalTopIndex+"!__** ");
     }
@@ -424,7 +427,7 @@ module.exports = {
                     beatmap_id: score.beatmap.id,
                     user_id: user.id,
                   });
-                  if(beatmap.status == "ranked" || best.status == "approved" || beatmap.status == "loved"){
+                  if(beatmap.status != "graveyard" && beatmap.status != "wip" && beatmap.status != "pending"){
                   const res = await axios.get("https://osu.ppy.sh/api/get_scores?k="+AccessToken+"&b="+score.beatmap.id+"&limit=50");
                   global = res.data;
                   global.reverse();
@@ -439,7 +442,7 @@ module.exports = {
                   } else {
                     for(let i in global){
                       if(global[i].score > score.score && foundTop == false){
-                        globalTopIndex = Math.abs(Number(i) - 51);
+                        globalTopIndex = Math.abs(Number(i) - global.length - 1);
                         //console.log(global[i].score+" "+score.score);
                         foundTop = true;
                       }
