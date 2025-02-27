@@ -105,7 +105,7 @@ const start = async (uID) => {
       case "SH":
           rank = "<:Srankhidden:1324397032793964636>"
           break;
-      case "SS":
+      case "X":
           rank = "<:ssrank:1324402828340498542>"
           break;
       case "S":

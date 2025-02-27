@@ -233,7 +233,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         case "SH":
             rank = "<:Srankhidden:1324397032793964636>"
             break;
-        case "SS":
+        case "X":
             rank = "<:ssrank:1324402828340498542>"
             break;
         case "S":
@@ -451,9 +451,10 @@ module.exports = {
                   }
                   let newScorePP = ppData.currPP;
                   let topPlayIndex = 0;
-                  best.reverse()
+                  best.reverse();
+                  console.log(best[best.length - 1].pp +" || "+ newScorePP)
                   if(best[0].pp < newScorePP){
-                    if(newScorePP > best[best.length - 1].pp && foundPP == false){
+                    if(newScorePP == Number((best[best.length - 1].pp).toFixed(2)) && foundPP == false){
                         topPlayIndex = 1;
                         foundPP = true;
                     } else {

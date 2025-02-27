@@ -145,7 +145,8 @@ module.exports = {
             if(mod.length == 0) mod = ['NM'];
 
             let rank = "";
-            switch(scores[i].rank){
+            console.log(rs.rank);
+            switch(rs.rank){
                 case "SSH":
                     rank = "<:sshidden:1324402826255929407>"
                     break;
@@ -155,7 +156,7 @@ module.exports = {
                 case "SS":
                     rank = "<:ssrank:1324402828340498542>"
                     break;
-                case "S":
+                case "X":
                     rank = "<:srank:1324402824511098931>"
                     break;
                 case "A":
@@ -184,8 +185,8 @@ module.exports = {
                 .setThumbnail("https://b.ppy.sh/thumb/"+map.beatmapset_id+"l.jpg")
                 .addFields(
                     {
-                        name: progress+"**   "+rank+"**   |   +**"+mod+"**   |   **"+rs.maxcombo+"x/**"+map.max_combo+"x   |   **"+rs.score.toLocaleString()+"**",
-                        value: "**"+accuracy.toFixed(2)+"%** | **"+rs.pp.toFixed(2)+"PP** | {"+rs.count300+" | "+rs.count100+" | "+rs.count50+" | "+rs.countmiss+"}   <t:"+timestamp+":R>",
+                        name: progress+" "+rank+" +"+mod+"  |   **"+rs.maxcombo+"x/**"+map.max_combo+"x  |  <t:"+timestamp+":R>",
+                        value: "**"+rs.pp.toFixed(2)+"PP **  •  **"+accuracy.toFixed(2)+"%**  •  "  +rs.countmiss+" <:miss:1324410432450068555>",
                         inline: false
                     },
                     {
