@@ -201,7 +201,7 @@ async function calcPP(score, map, total, modString) {
         return {stats: maxAttrs, currPP: currentPP, fcPP: fcPP, maxPP: maxPP, accuracy: sc.accuracy, clockRate: clockRate, cs: cs}
     }
 }
-async function generateRs(beatmap, blob, beatmapset, user, progress, modString, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex){
+async function generateRs(beatmap, blob, beatmapset, user, progress, modString, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex){
     let specialString = " ";
     let embedColor = lightskyblue;
     let rank = "";
@@ -222,6 +222,9 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     }
     if(topPlayIndex == 1){
         embedColor = white;
+    }
+    if(modIndex > 0){
+        specialString = specialString + "\n**__+"+modString+" Top #"+modIndex+"!__**";
     }
     else if(topPlayIndex > 0){
         embedColor = gold;
@@ -468,12 +471,37 @@ module.exports = {
                     }
                 }
                 }
+                let enumSum = 0;
+            
+                //there has to be a better way
+                if(mods.includes("HR"))
+                  enumSum = enumSum + 16;
+                if(mods.includes("HD"))
+                  enumSum = enumSum + 8;
+                if(mods.includes("DT"))
+                  enumSum = enumSum + 64;
+                if(mods.includes("NF"))
+                  enumSum = enumSum + 1;
+                if(mods.includes("EZ"))
+                  enumSum = enumSum + 2;
+                if(mods.includes("SD"))
+                  enumSum = enumSum + 32;
+
+                const res = await axios.get("https://osu.ppy.sh/api/get_scores?k="+AccessToken+"&b="+beatmap.id+"&mods="+enumSum+"&limit=100");
+                const modscores = res.data;
+                //console.log(modscores);
+                let modIndex = 0;
+                for(let i = 0; i < modscores.length; i++){
+                    if(modscores[i].username === user.username){
+                        modIndex = i + 1;
+                    }
+                }
                 let percentage = ppData.stats.state.n300;
                 percentage = (total / percentage) * 100
                 let progress = "@"+Math.round(percentage)+"%";
                 if(percentage == 100) progress = "";
 
-                const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex);
+                const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                 message.channel.send({ embeds: [rsEmbed]});
                 } catch (err){
                     console.log(err);
