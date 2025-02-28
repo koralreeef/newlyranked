@@ -53,7 +53,7 @@ const buildEmbed = async(title, beatmap, first, index) => {
     return embed;
 }
 
-const start = async (bID, mod, name) => {
+const start = async (bID, mod, name, button) => {
   console.log(bID+" asdcasd");
     const url = new URL(
       "https://osu.ppy.sh/oauth/token"
@@ -124,6 +124,50 @@ const start = async (bID, mod, name) => {
     let count = 1;
     let userScore = "";
     //console.log(maxAttrs);
+    if(scores.length < 11)
+      button.setDisabled(true);
+    for(let i = 0; i < scores.length; i++){
+      if(scores[i].username === name){
+      let rank = "";
+      switch (scores[i].rank){
+        case "SSH":
+            rank = "<:sshidden:1324402826255929407>"
+            break;
+        case "SH":
+            rank = "<:Srankhidden:1324397032793964636>"
+            break;
+        case "X":
+            rank = "<:ssrank:1324402828340498542>"
+            break;
+        case "S":
+            rank = "<:srank:1324402824511098931>"
+            break;
+        case "A":
+            rank = "<:arank:1324402781850701824>"
+            break;
+        case "B":
+            rank = "<:brank:1324402783952306188>"
+            break;
+        case "C":
+            rank = "<:crank:1324402785843675177>"
+            break;
+        case "D":
+            rank = "<:drank:1324402787840426105>"
+            break;
+        case "F":
+            rank = "<:frank:1324404867208450068>"
+            break;
+      }
+      const calc = await calcPP(scores[i], modString, maxAttrs);
+      const score = Number(scores[i].score);
+      let date = Date.parse(scores[i].date);
+      let timestamp = Math.floor(date/1000) - (8 * 3600); //remove last subtraction after dst
+      userScore = "**#"+(i + 1)+"** **__["+scores[i].username+"](https://osu.ppy.sh/users/"+scores[i].user_id+")__**: "+score.toLocaleString()+" • **"+Number(calc.currPP).toFixed(2)+"**/"+maxPP+"PP  **+"+modString+"**\n"
+      +"**"+rank+"** "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" <:miss:1324410432450068555> • <t:"+timestamp+":R>\n";
+      console.log(userScore);
+      }
+    }
+
     for(let i = 0; i < scores.length; i++){
       if(i == 0)
       first = scores[i].user_id;
@@ -159,7 +203,7 @@ const start = async (bID, mod, name) => {
             rank = "<:frank:1324404867208450068>"
             break;
       }
-      console.log(test+" "+rank);
+      //console.log(test+" "+rank);
       const calc = await calcPP(scores[i], modString, maxAttrs);
       const score = Number(scores[i].score);
       let date = Date.parse(scores[i].date);
@@ -228,7 +272,7 @@ module.exports = {
             if(n){
               name = n.username;
             }
-            const sorted = await start(getBeatmapID(), msg.substring(5), name);
+            const sorted = await start(getBeatmapID(), msg.substring(5), name, forward);
             const embed = await buildEmbed(sorted.title, sorted.beatmap, sorted.first, ind);
             const msgRef = await message.channel.send({embeds: [embed],
                                   components: [row] 
@@ -269,7 +313,6 @@ module.exports = {
                 components: [],
               });
             });
-            
         }
     }
   }
