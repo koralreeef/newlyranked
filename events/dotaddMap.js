@@ -10,7 +10,8 @@ module.exports = {
     async execute(message) {
       const api = new Client(await getAccessToken());
       const msg = message.content;
-      if(regex.test(msg) && (message.author.id == "109299841519099904" || message.author.id == "450478289107025920")) {
+      if(regex.test(msg)) {
+        if(message.author.id == "109299841519099904" || message.author.id == "450478289107025920") {
         let mapID = msg.substring(8);
         let beatmap;
         let self;
@@ -32,10 +33,18 @@ module.exports = {
         } else {
         await aimLists.create({
             map_id: mapID,
-            adder: self.username
+            adder: self.username,
+            difficulty: beatmap.version,
+            title: beatmap.beatmapset.title,
+            artist: beatmap.beatmapset.artist,
+            creator: beatmap.beatmapset.creator,
+            creatorID: beatmap.beatmapset.user_id,
         })
         return message.channel.send("beatmap added to hr reef collection!\n"+beatmap.beatmapset.artist+" - "+beatmap.beatmapset.title+" [["+beatmap.version+"]]"+
             "(https://osu.ppy.sh/beatmapsets/"+beatmap.beatmapset_id+"#osu/"+beatmap.id+")");
+        }
+        } else{
+            return message.channel.send("only koral and ruyu can add maps for now sorry");
         }
       }
     }

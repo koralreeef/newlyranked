@@ -5,14 +5,7 @@ const { aimLists, aimScores } = require('../db/dbObjects.js');
 const { lightskyblue } = require("color-name");
 
 async function buildEmbed(map) {
-    const api = new Client(await getAccessToken());
-    let beatmap;
-    try{
-        beatmap = await api.beatmaps.getBeatmap(map.map_id);
-    } catch (err) {
-        return
-    }
-    const mapInfo = beatmap.beatmapset.artist+" - "+beatmap.beatmapset.title+" ["+beatmap.version+"]"
+    const mapInfo = map.artist+" - "+map.title+" ["+map.version+"]"
     const scores = await aimScores.findAll({ 
         where: {map_id: map.map_id },
         order: [
@@ -32,14 +25,14 @@ async function buildEmbed(map) {
     }
     const scoreEmbed = new EmbedBuilder()
     .setAuthor({ name: "Misscount leaderboard for: \n"+mapInfo,
-        url: "https://osu.ppy.sh/b/"+beatmap.id,
+        url: "https://osu.ppy.sh/b/"+map.map_id,
         iconURL: "https://a.ppy.sh/"+first
     })
-    .setThumbnail("https://b.ppy.sh/thumb/"+beatmap.beatmapset.id+"l.jpg")
+    .setThumbnail("https://b.ppy.sh/thumb/"+map.map_id+"l.jpg")
     .setDescription(`\n${scoreArray}`)
     .setColor(lightskyblue)
-    .setFooter({text : beatmap.status+" mapset by "+beatmap.beatmapset.creator,
-        iconURL: "https://a.ppy.sh/"+beatmap.beatmapset.user_id 
+    .setFooter({text : beatmap.status+" mapset by "+map.creator,
+        iconURL: "https://a.ppy.sh/"+map.user_id 
     });
     console.log(scoreEmbed)
     return scoreEmbed;
@@ -110,4 +103,4 @@ module.exports = {
         }
       }
     }
-//idk how to hook it up but we'll live
+
