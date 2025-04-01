@@ -8,5 +8,7 @@ const sequelize = new Sequelize('database', 'username', 'password', {
 });
 
 const osuUsers = require('./models/osuUsers.js')(sequelize, Sequelize.DataTypes);
+const aimScores = require('./models/aimScores.js')(sequelize, Sequelize.DataTypes);
+const aimLists = require('./models/aimLists.js')(sequelize, Sequelize.DataTypes);
 
-module.exports = { osuUsers };
+module.exports = { osuUsers, aimScores, aimLists };

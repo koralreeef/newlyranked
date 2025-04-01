@@ -161,7 +161,7 @@ const start = async (bID, mod, name, button) => {
       const calc = await calcPP(scores[i], modString, maxAttrs);
       const score = Number(scores[i].score);
       let date = Date.parse(scores[i].date);
-      let timestamp = Math.floor(date/1000) - (8 * 3600); //remove last subtraction after dst
+      let timestamp = Math.floor(date/1000) - (7 * 3600); //remove last subtraction after dst
       userScore = "**#"+(i + 1)+"** **__["+scores[i].username+"](https://osu.ppy.sh/users/"+scores[i].user_id+")__**: "+score.toLocaleString()+" • **"+Number(calc.currPP).toFixed(2)+"**/"+maxPP+"PP  **+"+modString+"**\n"
       +"**"+rank+"** "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" <:miss:1324410432450068555> • <t:"+timestamp+":R>\n";
       console.log(userScore);
@@ -207,7 +207,7 @@ const start = async (bID, mod, name, button) => {
       const calc = await calcPP(scores[i], modString, maxAttrs);
       const score = Number(scores[i].score);
       let date = Date.parse(scores[i].date);
-      let timestamp = Math.floor(date/1000) - (8 * 3600); //remove last subtraction after dst
+      let timestamp = Math.floor(date/1000) - (7 * 3600); //remove last subtraction after dst
       if(scores[i].username === name){
       scoreString = scoreString + ("**#"+(i + 1)+"** **__["+scores[i].username+"](https://osu.ppy.sh/users/"+scores[i].user_id+")__**: "+score.toLocaleString()+" • **"+Number(calc.currPP).toFixed(2)+"**/"+maxPP+"PP  **+"+modString+"**\n"
       +"**"+rank+"** "+Number(calc.acc).toFixed(2)+"% { **"+scores[i].maxcombo+"x**/"+beatmap.max_combo+ " } "+scores[i].countmiss+" <:miss:1324410432450068555> • <t:"+timestamp+":R>\n");
