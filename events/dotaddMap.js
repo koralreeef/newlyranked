@@ -33,6 +33,7 @@ module.exports = {
         } else {
         await aimLists.create({
             map_id: mapID,
+            set_id: beatmap.beatmapset_id,
             adder: self.username,
             difficulty: beatmap.version,
             title: beatmap.beatmapset.title,

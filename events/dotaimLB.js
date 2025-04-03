@@ -5,7 +5,7 @@ const { aimLists, aimScores } = require('../db/dbObjects.js');
 const { lightskyblue } = require("color-name");
 
 async function buildEmbed(map) {
-    const mapInfo = map.artist+" - "+map.title+" ["+map.version+"]"
+    const mapInfo = map.artist+" - "+map.title+" ["+map.difficulty+"]"
     const scores = await aimScores.findAll({ 
         where: {map_id: map.map_id },
         order: [
@@ -13,26 +13,29 @@ async function buildEmbed(map) {
         ]
     })
     let scoreArray = ""
-    let first;
+    let first = scores[0].user_id;
     for (score in scores){
         let bro = scores[score]
-        first = bro.user_id
         let index = Number(score) + 1
-        scoreArray = scoreArray + ("**#"+index+"** **"+bro.username+"** • **"+bro.combo+"x**/"+bro.max_combo+" • **"+bro.misscount+"** <:miss:1324410432450068555>** \n"+bro.accuracy+"%  • "+bro.score.toLocaleString()+" "+bro.mods+"**\n")
+        let date = Date.parse(bro.date);
+        let timestamp = Math.floor(date/1000);
+        scoreArray = scoreArray + ("**#"+index+"** **"+bro.username+"** • **"+bro.combo+"x**/"+bro.max_combo+" • **"+bro.misscount+"** <:miss:1324410432450068555>** <t:"+timestamp+":R>\n"
+          +bro.accuracy+"%  • **"+bro.score.toLocaleString()+"** "+bro.mods+"**\n")
     }
     if(scoreArray === ""){
         scoreArray = "**no scores yet :(**"
     }
     const scoreEmbed = new EmbedBuilder()
-    .setAuthor({ name: "Misscount leaderboard for: \n"+mapInfo,
-        url: "https://osu.ppy.sh/b/"+map.map_id,
+    .setAuthor({ name: "Current #1: "+scores[0].username,
         iconURL: "https://a.ppy.sh/"+first
     })
-    .setThumbnail("https://b.ppy.sh/thumb/"+map.map_id+"l.jpg")
+    .setTitle(mapInfo)
+    .setURL("https://osu.ppy.sh/b/"+map.map_id)
+    .setThumbnail("https://b.ppy.sh/thumb/"+map.set_id+"l.jpg")
     .setDescription(`\n${scoreArray}`)
     .setColor(lightskyblue)
-    .setFooter({text : beatmap.status+" mapset by "+map.creator,
-        iconURL: "https://a.ppy.sh/"+map.user_id 
+    .setFooter({text : " mapset by "+map.creator,
+        iconURL: "https://a.ppy.sh/"+map.creatorID 
     });
     console.log(scoreEmbed)
     return scoreEmbed;
@@ -63,7 +66,7 @@ module.exports = {
         const row2 = new ActionRowBuilder().addComponents(backward, forward);
 
         const leaderboard = await buildEmbed(aimList[0]); 
-        message.channel.send({ embeds: [leaderboard], components: [row] });
+        const msgRef = await message.channel.send({ embeds: [leaderboard], components: [row] });
         
         const collector = message.channel.createMessageComponentCollector({
             time: 120_000,
@@ -85,7 +88,7 @@ module.exports = {
             }
             if (m.customId === "forward" + epoch) {
               ind++
-              if (ind == maxIndex - 1) forward.setDisabled(true);
+              if (ind == maxIndex) forward.setDisabled(true);
               backward.setDisabled(false);
               console.log("forwards");
               await m.update({

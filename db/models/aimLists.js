@@ -4,6 +4,9 @@ module.exports = (sequelize, DataTypes) => {
 			type: DataTypes.STRING,
 			primaryKey: true,
 		},
+		set_id: {
+			type: DataTypes.STRING,
+		},
 		adder: {
 			type: DataTypes.STRING,
 		},

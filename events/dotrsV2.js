@@ -302,13 +302,15 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
 }
 async function inputScore(blob, score, acc, modString) {
     let accuracy = acc.toFixed(2)
+    modString = "+" + modString;
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, user_id: score.user_id, mods: modString },
     });
     const validMap = await aimLists.findOne({
         where: { map_id: score.beatmap.id }
     })
-    if (validMap) {
+    console.log(score)
+    if (validMap && score.passed) {
         if (aimScore) {
             console.log("existing score found")
             if (score.statistics.count_miss < aimScore.misscount) {
@@ -331,7 +333,7 @@ async function inputScore(blob, score, acc, modString) {
                 map_id: score.beatmap.id,
                 user_id: score.user_id,
                 username: score.user.username,
-                mods: "+"+modString,
+                mods: modString,
                 score: score.score,
                 accuracy: accuracy,
                 misscount: score.statistics.count_miss,
@@ -339,7 +341,7 @@ async function inputScore(blob, score, acc, modString) {
                 max_combo: blob.stats.difficulty.maxCombo,
                 date: score.created_at,
             });
-            return "logged new score into collection!"
+            return "logged new score into leaderboard!"
         }
     }
 }
@@ -454,7 +456,7 @@ module.exports = {
                         ppData = await calcPP(score, map, total, modString)
                     }
 
-                    //console.log(score);
+                    console.log(score);
                     //console.log(ppData);   
                     // Free the beatmap manually to avoid risking memory leakage.
                     map.free();
@@ -521,21 +523,24 @@ module.exports = {
 
                         const res2 = await axios.get("https://osu.ppy.sh/api/get_scores?k=" + AccessToken + "&b=" + beatmap.id + "&mods=" + enumSum + "&limit=100");
                         const modscores = res2.data;
-                        modscores.reverse();
                         //console.log(modscores);
-                        if (score.score == modscores[modscores.length - 1].score) {
-                            //console.log(score.score);
-                            modIndex = 1;
-                        }
-                        else if (score.score < modscores[0].score) {
-                            console.log(score.score + " < " + modscores[0].score);
-                            modIndex = 0;
-                        } else {
-                            for (let i in modscores) {
-                                if (modscores[i].score > score.score && foundModTop == false) {
-                                    modIndex = Math.abs(Number(i) - modscores.length - 1);
-                                    //console.log(global[i].score+" "+score.score);
-                                    foundModTop = true;
+                        //CATCHING SD LEADERBOARDS WOW
+                        if (modscores.length > 0) {
+                            modscores.reverse();
+                            if (score.score == modscores[modscores.length - 1].score) {
+                                //console.log(score.score);
+                                modIndex = 1;
+                            }
+                            else if (score.score < modscores[0].score) {
+                                console.log(score.score + " < " + modscores[0].score);
+                                modIndex = 0;
+                            } else {
+                                for (let i in modscores) {
+                                    if (modscores[i].score > score.score && foundModTop == false) {
+                                        modIndex = Math.abs(Number(i) - modscores.length - 1);
+                                        //console.log(global[i].score+" "+score.score);
+                                        foundModTop = true;
+                                    }
                                 }
                             }
                         }
