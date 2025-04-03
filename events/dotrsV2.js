@@ -1,5 +1,5 @@
-const { Events, EmbedBuilder, GuildOnboardingMode } = require('discord.js');
-const { Client, calcAccuracy, calcModStat } = require('osu-web.js');
+const { Events, EmbedBuilder } = require('discord.js');
+const { Client, calcModStat } = require('osu-web.js');
 const { clientIDv2, clientSecret, AccessToken } = require('../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../db/dbObjects.js');
@@ -300,16 +300,29 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         });
     return rsEmbed;
 }
-async function inputScore(blob, score, acc, modString) {
+async function inputScore(blob, score, acc, modArray) {
     let accuracy = acc.toFixed(2)
-    modString = "+" + modString;
+    let mods = "+"
+    let hidden = false
+    console.log(modArray)
+    if (modArray.includes("HD")) {
+        hidden = true
+    }
+    if (modArray.includes("HR")) {
+        mods = mods + "HR"
+    }
+    else if (modArray.includes("DT")) {
+        mods = mods + "DT";
+    } else {
+        mods = mods + "NM";
+    }
     const aimScore = await aimScores.findOne({
-        where: { map_id: score.beatmap.id, user_id: score.user_id, mods: modString },
+        where: { map_id: score.beatmap.id, user_id: score.user_id, mods: mods },
     });
     const validMap = await aimLists.findOne({
         where: { map_id: score.beatmap.id }
     })
-    console.log(score)
+    console.log(validMap)
     if (validMap && score.passed) {
         if (aimScore) {
             console.log("existing score found")
@@ -321,6 +334,7 @@ async function inputScore(blob, score, acc, modString) {
                 aimScore.accuracy = accuracy;
                 aimScore.combo = score.max_combo;
                 aimScore.date = score.created_at;
+                aimScore.hidden = hidden;
                 console.log("updating misscount...")
                 console.log(string)
                 aimScore.save();
@@ -331,15 +345,17 @@ async function inputScore(blob, score, acc, modString) {
             console.log("creating new score")
             await aimScores.create({
                 map_id: score.beatmap.id,
+                index: validMap.id,
                 user_id: score.user_id,
                 username: score.user.username,
-                mods: modString,
+                mods: mods,
                 score: score.score,
                 accuracy: accuracy,
                 misscount: score.statistics.count_miss,
                 combo: score.max_combo,
                 max_combo: blob.stats.difficulty.maxCombo,
                 date: score.created_at,
+                hidden: hidden
             });
             return "logged new score into leaderboard!"
         }
@@ -569,7 +585,7 @@ module.exports = {
                     percentage = (total / percentage) * 100
                     let progress = "@" + Math.round(percentage) + "%";
                     if (percentage == 100) progress = "";
-                    const leaderboardString = await inputScore(ppData, score, accuracy, modString)
+                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods)
                     const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                     message.channel.send({ content: leaderboardString, embeds: [rsEmbed] });
                 } catch (err) {

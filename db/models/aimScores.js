@@ -1,5 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
 	return sequelize.define('aimScores', {
+		index: {
+			type: DataTypes.INTEGER,
+        },
 		map_id: {
 			type: DataTypes.STRING,
 		},
@@ -29,6 +32,9 @@ module.exports = (sequelize, DataTypes) => {
         },
 		date: {
 			type: DataTypes.DATE
+		},
+		hidden: {
+			type: DataTypes.BOOLEAN
 		}
 	}, {
 		timestamps: false,

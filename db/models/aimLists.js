@@ -1,5 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
 	return sequelize.define('aimLists', {
+		id: {
+			type: DataTypes.INTEGER
+		},
 		map_id: {
 			type: DataTypes.STRING,
 			primaryKey: true,

@@ -15,12 +15,16 @@ async function buildEmbed(map) {
     let scoreArray = ""
     let first = scores[0].user_id;
     for (score in scores){
+        let hidden = ""
         let bro = scores[score]
         let index = Number(score) + 1
         let date = Date.parse(bro.date);
         let timestamp = Math.floor(date/1000);
+        if(bro.hidden){
+          hidden = " (HD)"
+        }
         scoreArray = scoreArray + ("**#"+index+"** **"+bro.username+"** • **"+bro.combo+"x**/"+bro.max_combo+" • **"+bro.misscount+"** <:miss:1324410432450068555>** <t:"+timestamp+":R>\n"
-          +bro.accuracy+"%  • **"+bro.score.toLocaleString()+"** "+bro.mods+"**\n")
+          +bro.accuracy+"%  • **"+bro.score.toLocaleString()+"** "+bro.mods+hidden+"**\n")
     }
     if(scoreArray === ""){
         scoreArray = "**no scores yet :(**"
@@ -48,7 +52,11 @@ module.exports = {
       const api = new Client(await getAccessToken());
       const msg = message.content;
       if(msg.toLowerCase() === ".aimlb") {
-        const aimList = await aimLists.findAll(); 
+        const aimList = await aimLists.findAll({        
+          order: [
+          ["map_id", "DESC"],
+          ]
+        }); 
     
         const epoch = Date.now();
         const forward = new ButtonBuilder()

@@ -1,11 +1,13 @@
-const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-const { Client } = require("osu-web.js");
-const { getAccessToken } = require('../helper.js');
-const { aimLists, aimScores } = require('../db/dbObjects.js');
+const { Events, EmbedBuilder } = require('discord.js');
+const { aimLists } = require('../db/dbObjects.js');
 const { lightskyblue } = require("color-name");
 
 async function buildEmbed() {
-    const maps = await aimLists.findAll()
+    const maps = await aimLists.findAll({
+      order: [
+        ["map_id", "DESC"],
+        ]
+    })
     let mapArray = ""
     for (map in maps){
       current = maps[map];
