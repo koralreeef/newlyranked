@@ -3,6 +3,9 @@ module.exports = (sequelize, DataTypes) => {
 		id: {
 			type: DataTypes.INTEGER
 		},
+		collection: {
+			type: DataTypes.STRING,
+		},
 		map_id: {
 			type: DataTypes.STRING,
 			primaryKey: true,
@@ -28,6 +31,9 @@ module.exports = (sequelize, DataTypes) => {
 		creatorID: {
 			type: DataTypes.STRING,
 		},
+		is_current: {
+			type: DataTypes.INTEGER
+		}
 	}, {
 		timestamps: false,
 	});

@@ -15,6 +15,9 @@ module.exports = (sequelize, DataTypes) => {
 		mods: {
             type: DataTypes.STRING,
         },
+		collection: {
+            type: DataTypes.STRING,
+        },
 		score: {
             type: DataTypes.INTEGER,
         },
@@ -35,6 +38,9 @@ module.exports = (sequelize, DataTypes) => {
 		},
 		hidden: {
 			type: DataTypes.BOOLEAN
+		},
+		is_current: {
+			type: DataTypes.INTEGER
 		}
 	}, {
 		timestamps: false,

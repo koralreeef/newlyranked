@@ -2,7 +2,7 @@ const { Events, EmbedBuilder } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
 const { lightskyblue } = require("color-name");
 
-const regex = /^\.misscount /gm;
+const regex = /^\.misscount/gm;
 
 module.exports = {
     name: Events.MessageCreate,
@@ -18,22 +18,61 @@ module.exports = {
         console.log(message.content);
         */
         if (regex.test(msg.substring(0, 11))) {
-            let user = msg.substring(11);
-            console.log(user)
-            const check = await osuUsers.findOne({ where: { username: user } });
+            let collectionStr = 0
+            let username = "";
+            if(msg.indexOf("u=") == -1){
+                const self = await osuUsers.findOne({ where: { user_id: message.author.id } });
+                username = self.username
+                collectionStr = msg.length;
+            } else {
+                username = msg.substring(msg.indexOf("u=") + 2)
+                collectionStr = msg.indexOf("u=") - 1;
+            }
+            let collectionName = "";
+            if(msg.indexOf("c=") > 0){
+                collectionName = msg.substring(msg.indexOf("c=") + 2, collectionStr);
+            }
+            console.log(collectionName)
+            console.log(username)
+            if (msg === ".misscount"){
+                const self = await osuUsers.findOne({ where: { user_id: message.author.id } });
+                username = self.username
+                is_current = 1;
+            }
+            const check = await osuUsers.findOne({ where: { username: username } });
             if (check) {
+                let hrArray = await aimScores.findAll({
+                where: { is_current: 1, username: check.username, mods: "+HR" },                 
+                order: [["map_id", "DESC"]] })
+                let nmArray = await aimScores.findAll({
+                where: { is_current: 1, username: check.username, mods: "+NM" },                 
+                order: [["map_id", "DESC"]] })
+                let maps = await aimLists.findAll({    
+                    where: { is_current: 1 },     
+                    order: [
+                        ["map_id", "DESC"],
+                        ]}
+                    )
                 // ITS SHIT
-                const maps = await aimLists.findAll({         
-                order: [
-                    ["map_id", "DESC"],
-                    ]}
-                )
-                const hrArray = await aimScores.findAll({
-                where: { username: check.username, mods: "+HR" },                 
-                order: [["map_id", "DESC"]] })
-                const nmArray = await aimScores.findAll({
-                where: { username: check.username, mods: "+NM" },                 
-                order: [["map_id", "DESC"]] })
+                if(collectionName.length > 0){
+                    console.log("please "+collectionName)
+                    maps = await aimLists.findAll({
+                        where: { collection: collectionName },
+                        order: [
+                          ["map_id", "DESC"],
+                        ]
+                    })
+                    console.log(maps)
+                    if(maps.length < 1){
+                        return message.channel.send("couldnt find collection")
+                    }
+                    hrArray = await aimScores.findAll({
+                    where: { collection: collectionName, username: check.username, mods: "+HR" },                 
+                    order: [["map_id", "DESC"]] })
+                    nmArray = await aimScores.findAll({
+                    where: { collection: collectionName, username: check.username, mods: "+NM" },                 
+                    order: [["map_id", "DESC"]] })
+                }
                 let hrMisscount = 0;
                 let hrString = "\nnot enough hr scores to show full list :(";
                 let nmMisscount = 0;
@@ -43,7 +82,6 @@ module.exports = {
                 let totalMisscount = 0;
                 console.log(hrArray.length)
                 if (hrArray.length == maps.length) {
-                    console.log("penis")
                     hrString = "\n";
                     for (score in hrArray) {
                         hrMisscount = hrMisscount + hrArray[score].misscount;
@@ -76,7 +114,7 @@ module.exports = {
                 if(totalMisscount == 0)
                     totalMisscount = -1;
                 const misscountEmbed = new EmbedBuilder()
-                    .setAuthor({ name: "misscount totals for "+user,
+                    .setAuthor({ name: "misscount totals for "+username+"\ncollection: "+maps[0].collection,
                         iconURL: "https://a.ppy.sh/"+uID
                     })
                     .setDescription("hr misscount: **"+hrMisscount+"**"+hrString
@@ -86,7 +124,7 @@ module.exports = {
                     .setFooter({text : "great job!"});
                 return message.channel.send({ embeds: [misscountEmbed] })
             } else {
-                return message.channel.send("user not found, use /osuset")
+                return message.channel.send("user or collection not found, use /osuset")
             }
         }
     }

@@ -342,6 +342,10 @@ async function inputScore(blob, score, acc, modArray) {
             }
             return ""
         } else {
+            let is_current = 0;
+            if(validMap.is_current == 1){
+                is_current = 1;
+            }
             console.log("creating new score")
             await aimScores.create({
                 map_id: score.beatmap.id,
@@ -355,7 +359,8 @@ async function inputScore(blob, score, acc, modArray) {
                 combo: score.max_combo,
                 max_combo: blob.stats.difficulty.maxCombo,
                 date: score.created_at,
-                hidden: hidden
+                hidden: hidden,
+                is_current: is_current
             });
             return "logged new score into leaderboard!"
         }
@@ -413,7 +418,7 @@ module.exports = {
                 usr = selfName.username;
             }
             //console.log(offset);
-            console.log(usr);
+            //console.log(usr);
             let user;
             if (self && selfName)
                 usr = selfName.username;

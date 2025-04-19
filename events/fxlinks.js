@@ -14,7 +14,7 @@ module.exports = {
       if (message.author.bot) return false;
       message.channel.send("https://fxtwitter.com/"+message.content.substring(20));
   }
-    console.log(msg.substring(0, 26))
+    //console.log(msg.substring(0, 26))
     if (msg.substring(0, 26) === "https://www.instagram.com/") {
       message.suppressEmbeds(true) // Removes all embeds from the message.
       if (message.author.bot) return false;

@@ -40,6 +40,7 @@ module.exports = {
             artist: beatmap.beatmapset.artist,
             creator: beatmap.beatmapset.creator,
             creatorID: beatmap.beatmapset.user_id,
+            is_current: 1
         })
         return message.channel.send("beatmap added to hr reef collection!\n"+beatmap.beatmapset.artist+" - "+beatmap.beatmapset.title+" [["+beatmap.version+"]]"+
             "(https://osu.ppy.sh/beatmapsets/"+beatmap.beatmapset_id+"#osu/"+beatmap.id+")");
