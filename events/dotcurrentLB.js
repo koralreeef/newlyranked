@@ -50,7 +50,7 @@ module.exports = {
     name: Events.MessageCreate,
     async execute(message) {
       const api = new Client(await getAccessToken());
-      const msg = message.content;
+      const msg = "";
       if(msg.toLowerCase() === ".currentlb") {
         const aimList = await aimLists.findAll({
           where: {is_current: 1},        

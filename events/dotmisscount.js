@@ -77,7 +77,6 @@ module.exports = {
                 let hrString = "\nnot enough hr scores to show full list :(";
                 let nmMisscount = 0;
                 let nmString = "\nnot enough nm scores to show full list :(";
-                let uID = hrArray[0].user_id ?? nmArray[0].user_id;
                 let totalString = "\nnot enough scores to show full list :(";
                 let totalMisscount = 0;
                 console.log(hrArray.length)
@@ -115,7 +114,7 @@ module.exports = {
                     totalMisscount = -1;
                 const misscountEmbed = new EmbedBuilder()
                     .setAuthor({ name: "misscount totals for "+username+"\ncollection: "+maps[0].collection,
-                        iconURL: "https://a.ppy.sh/"+uID
+                        iconURL: "https://a.ppy.sh/"+check.osu_id
                     })
                     .setDescription("hr misscount: **"+hrMisscount+"**"+hrString
                     +"\nnm misscount: **"+nmMisscount+"**"+nmString

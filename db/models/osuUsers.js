@@ -6,7 +6,11 @@ module.exports = (sequelize, DataTypes) => {
 		},
         username: {
             type: DataTypes.STRING,
-        }
+        },
+		osu_id: {
+			type: DataTypes.STRING,
+			primaryKey: true,
+		},
 	}, {
 		timestamps: false,
 	});

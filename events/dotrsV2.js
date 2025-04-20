@@ -349,6 +349,7 @@ async function inputScore(blob, score, acc, modArray) {
             console.log("creating new score")
             await aimScores.create({
                 map_id: score.beatmap.id,
+                collection: validMap.collection,
                 index: validMap.id,
                 user_id: score.user_id,
                 username: score.user.username,
@@ -442,7 +443,7 @@ module.exports = {
                     }
                 });
             } catch (err) {
-                return message.channel.send("couldnt find score");
+                return message.channel.send("no score found or you didnt use /osuset");
             }
             if (scores.length > 0) {
                 let score = scores[0];

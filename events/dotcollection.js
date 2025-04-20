@@ -9,7 +9,8 @@ async function buildEmbed(maps) {
   if (maps.length > 0) {
     for (map in maps) {
       current = maps[map];
-      mapArray = mapArray + ("[" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ") added by " + current.adder + "\n")
+      let ind = Number(map) + 1;
+      mapArray = mapArray + ("**"+ind+": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")**\n")
       if (map == 0) {
         collectionName = current.collection
       }
