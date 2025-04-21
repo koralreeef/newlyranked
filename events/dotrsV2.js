@@ -328,7 +328,7 @@ async function inputScore(blob, score, acc, modArray) {
             console.log("existing score found")
             if (score.statistics.count_miss < aimScore.misscount) {
                 const diff = score.statistics.count_miss - aimScore.misscount
-                const string = "improved misscount by **" + diff + "**! (" + aimScore.misscount + " -> " + score.statistics.count_miss + ")"
+                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + aimScore.misscount + " -> " + score.statistics.count_miss + ")"
                 aimScore.misscount = score.statistics.count_miss;
                 aimScore.score = score.score;
                 aimScore.accuracy = accuracy;

@@ -5,10 +5,12 @@ const { aimLists, aimScores } = require('../db/dbObjects.js');
 const { lightskyblue } = require("color-name");
 const regex = /^\.aimlbs/gm;
 
-async function buildEmbed(map) {
+async function buildEmbed(map, ind, maxIndex) {
   const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "]"
   let name = "no misscount leader yet!"
   let iconLink = ""
+  let pageNum = ind + 1;
+  let limit = maxIndex + 1;
   const scores = await aimScores.findAll({
     where: { map_id: map.map_id },
     order: [
@@ -19,7 +21,7 @@ async function buildEmbed(map) {
   if (scores.length < 1) {
     scoreArray = "**no scores yet :(**"
   } else {
-    name = "Current #1: "+scores[0].username;
+    name = "Current #1: " + scores[0].username + "\nmap: "+pageNum+"/"+limit;
     iconLink = scores[0].user_id
     for (score in scores) {
       let hidden = ""
@@ -34,23 +36,23 @@ async function buildEmbed(map) {
         + bro.accuracy + "%  • **" + bro.score.toLocaleString() + "** " + bro.mods + hidden + "**\n")
     }
   }
-
-const scoreEmbed = new EmbedBuilder()
-  .setAuthor({
-    name: name,
-    iconURL: "https://a.ppy.sh/" + iconLink
-  })
-  .setTitle(mapInfo)
-  .setURL("https://osu.ppy.sh/b/" + map.map_id)
-  .setThumbnail("https://b.ppy.sh/thumb/" + map.set_id + "l.jpg")
-  .setDescription(`\n${scoreArray}`)
-  .setColor(lightskyblue)
-  .setFooter({
-    text: "collection: " + map.collection + "\nmapset by " + map.creator,
-    iconURL: "https://a.ppy.sh/" + map.creatorID
-  });
-//console.log(scoreEmbed)
-return scoreEmbed;
+  
+  scoreEmbed = new EmbedBuilder()
+    .setAuthor({
+      name: name,
+      iconURL: "https://a.ppy.sh/" + iconLink
+    })
+    .setTitle(mapInfo)
+    .setURL("https://osu.ppy.sh/b/" + map.map_id)
+    .setThumbnail("https://b.ppy.sh/thumb/" + map.set_id + "l.jpg")
+    .setDescription(`\n${scoreArray}`)
+    .setColor(lightskyblue)
+    .setFooter({
+      text: "collection: " + map.collection + "\nmapset by " + map.creator,
+      iconURL: "https://a.ppy.sh/" + map.creatorID
+    });
+  //console.log(scoreEmbed)
+  return scoreEmbed;
 }
 
 
@@ -60,13 +62,42 @@ module.exports = {
     const api = new Client(await getAccessToken());
     const msg = message.content;
     if (regex.test(msg.substring(0, 8))) {
+      let mapIndex = -1;
+      let collectionName = "";
+      let collectionStr = 0;
+      const epoch = Date.now();
+
+      const forward = new ButtonBuilder()
+        .setCustomId("forward" + epoch)
+        .setLabel("⟶")
+        .setStyle(ButtonStyle.Primary);
+
+      const backward = new ButtonBuilder()
+        .setCustomId("back" + epoch)
+        .setDisabled(true)
+        .setLabel("⟵")
+        .setStyle(ButtonStyle.Primary);
+        
+      const row = new ActionRowBuilder().addComponents(backward, forward);
+      const row2 = new ActionRowBuilder().addComponents(backward, forward);
+
+      if (msg.indexOf("c=") == -1) {
+        collectionStr = msg.length;
+      } else {
+        collectionName = msg.substring(msg.indexOf("c=") + 2)
+        collectionStr = msg.indexOf("c=") - 1;
+      }
+
+      if (msg.indexOf("p=") > 0) {
+        mapIndex = Number(msg.substring(msg.indexOf("p=") + 2, collectionStr)) - 1;
+      }
       let aimList = await aimLists.findAll({
         where: { is_current: 1 },
         order: [
           ["map_id", "DESC"],
         ]
       });
-      let collectionName = msg.substring(8);
+
       if (collectionName.length > 0) {
         aimList = await aimLists.findAll({
           where: { collection: collectionName },
@@ -79,32 +110,27 @@ module.exports = {
         }
       }
       console.log("asdasd " + collectionName)
-      const epoch = Date.now();
-      const forward = new ButtonBuilder()
-        .setCustomId("forward" + epoch)
-        .setLabel("⟶")
-        .setStyle(ButtonStyle.Primary);
 
-      const backward = new ButtonBuilder()
-        .setCustomId("back" + epoch)
-        .setDisabled(true)
-        .setLabel("⟵")
-        .setStyle(ButtonStyle.Primary);
+      let ind = 0
+      let maxIndex = aimList.length - 1
 
-      const row = new ActionRowBuilder().addComponents(backward, forward);
-      const row2 = new ActionRowBuilder().addComponents(backward, forward);
+      if (mapIndex > -1) {
+        if (mapIndex >= aimList.length) return await message.channel.send("index is out of bounds for this collection; try a lower number")
+        ind = mapIndex;
+        if (ind > 0) backward.setDisabled(false)
+      }
 
-      const leaderboard = await buildEmbed(aimList[0]);
+      const leaderboard = await buildEmbed(aimList[ind], ind, maxIndex);
       if (aimList.length == 1) {
         return await message.channel.send({ embeds: [leaderboard] })
       }
+
       const msgRef = await message.channel.send({ embeds: [leaderboard], components: [row] });
 
       const collector = message.channel.createMessageComponentCollector({
-        time: 120_000,
+        time: 300_000,
       });
-      let ind = 0
-      let maxIndex = aimList.length - 1
+
       collector.on("collect", async (m) => {
         //gray out buttons on page end
 
@@ -114,7 +140,7 @@ module.exports = {
           forward.setDisabled(false);
           console.log("backwards");
           await m.update({
-            embeds: [await buildEmbed(aimList[ind])],
+            embeds: [await buildEmbed(aimList[ind], ind, maxIndex)],
             components: [row],
           })
         }
@@ -124,14 +150,14 @@ module.exports = {
           backward.setDisabled(false);
           console.log("forwards");
           await m.update({
-            embeds: [await buildEmbed(aimList[ind])],
+            embeds: [await buildEmbed(aimList[ind], ind, maxIndex)],
             components: [row2],
           })
         }
       });
       collector.on("end", async () => {
         await msgRef.edit({
-          embeds: [await buildEmbed(aimList[ind])],
+          embeds: [await buildEmbed(aimList[ind], ind, maxIndex)],
           components: [],
         });
       });

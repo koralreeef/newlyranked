@@ -41,12 +41,15 @@ module.exports = {
             }
             const check = await osuUsers.findOne({ where: { username: username } });
             if (check) {
+
                 let hrArray = await aimScores.findAll({
                 where: { is_current: 1, username: check.username, mods: "+HR" },                 
                 order: [["map_id", "DESC"]] })
+
                 let nmArray = await aimScores.findAll({
                 where: { is_current: 1, username: check.username, mods: "+NM" },                 
                 order: [["map_id", "DESC"]] })
+
                 let maps = await aimLists.findAll({    
                     where: { is_current: 1 },     
                     order: [
@@ -73,43 +76,107 @@ module.exports = {
                     where: { collection: collectionName, username: check.username, mods: "+NM" },                 
                     order: [["map_id", "DESC"]] })
                 }
+
                 let hrMisscount = 0;
-                let hrString = "\nnot enough hr scores to show full list :(";
+                let hrBool = false;
+                let hrString = "";
                 let nmMisscount = 0;
-                let nmString = "\nnot enough nm scores to show full list :(";
+                let nmBool = false;
+                let nmString = "";
                 let totalString = "\nnot enough scores to show full list :(";
                 let totalMisscount = 0;
+                let leftoversHR = "no scores found";
+
                 console.log(hrArray.length)
                 if (hrArray.length == maps.length) {
                     hrString = "\n";
                     for (score in hrArray) {
                         hrMisscount = hrMisscount + hrArray[score].misscount;
                         if(score != maps.length - 1){
-                        hrString = hrString + hrArray[score].misscount + "  |  "
+                        hrString = hrString + "[" + hrArray[score].misscount + "]" + "(https://osu.ppy.sh/b/" + maps[score].map_id + ")  |  "
                         } else {
-                        hrString = hrString + hrArray[score].misscount
-                        }          
+                        hrString = hrString + "[" + hrArray[score].misscount + "]" + "(https://osu.ppy.sh/b/" + maps[score].map_id + ")"
+                        }       
+                    }
+                    hrBool = true
+                    hrString = " **" + hrString + "**"
+                    leftoversHR = "";
+                }  else if (hrArray.length < maps.length) {
+                    for (let i = 0; i < maps.length; i++){
+                        let pageNum = i + 1
+                        const score = await aimScores.findOne({where: {map_id: maps[i].map_id, user_id: check.osu_id, mods: "+HR"
+                        }})
+                        if(score){
+                            if(leftoversHR === "no scores found"){
+                                leftoversHR = ""
+                            }
+                            leftoversHR = leftoversHR + "[" + score.misscount + "]" + "(https://osu.ppy.sh/b/" + maps[i].map_id + ")  |  "
+                            hrMisscount = hrMisscount + score.misscount
+                            //console.log("hi "+i)
+                        } else {
+                            if(i != maps.length - 1){
+                            hrString = hrString + "["+pageNum+"](https://osu.ppy.sh/b/" + maps[i].map_id + "), "
+                            } else {
+                            hrString = hrString + "["+pageNum+"](https://osu.ppy.sh/b/" + maps[i].map_id + ")"
+                            }    
+                            //console.log("missing "+i)
+                        }
                     }
                 }
+
+                console.log(nmArray.length)
+                let leftoversNM = "no scores found";
                 if (nmArray.length == maps.length) {
                     nmString = "\n";
                     for (score in nmArray) {
                         nmMisscount = nmMisscount + nmArray[score].misscount;
                         if(score != maps.length - 1){
-                        nmString = nmString + nmArray[score].misscount + "  |  "
+                        nmString = nmString + "[" + nmArray[score].misscount + "]" + "(https://osu.ppy.sh/b/" + maps[score].map_id + ")  |  "
                         } else {
-                        nmString = nmString + nmArray[score].misscount
+                        nmString = nmString + "[" + nmArray[score].misscount + "]" + "(https://osu.ppy.sh/b/" + maps[score].map_id + ")"
                         }       
+                    }
+                    nmBool = true
+                    nmString = " **" + nmString + "**"
+                    leftoversNM = "";
+                } else if (nmArray.length < maps.length) {
+                    for (let i = 0; i < maps.length; i++){
+                        let pageNum = i + 1
+                        const score = await aimScores.findOne({where: {map_id: maps[i].map_id, user_id: check.osu_id, mods: "+NM"
+                        }})
+                        if(score){
+                            if(leftoversNM === "no scores found"){
+                                leftoversNM = ""
+                            }
+                            leftoversNM = leftoversNM + "[" + score.misscount + "]" + "(https://osu.ppy.sh/b/" + maps[i].map_id + ")  |  "
+                            nmMisscount = nmMisscount + score.misscount
+                            //console.log("hi "+i)
+                        } else {
+                            if(i != maps.length - 1){
+                            nmString = nmString + "["+pageNum+"](https://osu.ppy.sh/b/" + maps[i].map_id + "), "
+                            } else {
+                            nmString = nmString + "["+pageNum+"](https://osu.ppy.sh/b/" + maps[i].map_id + ")"
+                            }    
+                            //console.log("missing "+i)
+                        }
                     }
                 }
                 if (nmArray.length == maps.length && hrArray.length == maps.length) {
                     totalMisscount = hrMisscount + nmMisscount
                     totalString = ""
                 }
-                if(hrMisscount == 0)
-                    hrMisscount = -1;
-                if(nmMisscount == 0)
-                    nmMisscount = -1;
+                if(!hrBool)
+                    hrString = "* \n**" + leftoversHR + "** \nmissing hr plays on map(s): \n**" + hrString + "**"
+                if(!nmBool)
+                    nmString = "* \n**" + leftoversNM + "** \nmissing nm plays on map(s): \n**" + nmString + "**"
+                if(leftoversHR === "no scores found"){
+                    hrString = "\nno scores found"
+                    hrMisscount = -1
+                }
+                if(leftoversNM === "no scores found"){
+                    nmString = "\nno scores found"
+                    nmMisscount = -1
+                }
                 if(totalMisscount == 0)
                     totalMisscount = -1;
                 const misscountEmbed = new EmbedBuilder()
@@ -117,8 +184,7 @@ module.exports = {
                         iconURL: "https://a.ppy.sh/"+check.osu_id
                     })
                     .setDescription("hr misscount: **"+hrMisscount+"**"+hrString
-                    +"\nnm misscount: **"+nmMisscount+"**"+nmString
-                    +"\ntotal misscount: **"+totalMisscount+"**"+totalString)
+                    +"\n\nnm misscount: **"+nmMisscount+"**"+nmString)
                     .setColor(lightskyblue)
                     .setFooter({text : "great job!"});
                 return message.channel.send({ embeds: [misscountEmbed] })
