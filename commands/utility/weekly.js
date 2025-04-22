@@ -11,7 +11,7 @@ module.exports = {
     cooldown: 5,
 	data: new SlashCommandBuilder()
 		.setName('weekly')
-		.setDescription('provides a list of the newest ranked beatmaps (std only) within the last week.')
+		.setDescription('provides a list of the newest ranked beatmaps (std only) within the last week. (this doesnt work)')
         .addNumberOption(option =>
             option.setName('minimum')
             .setDescription('set minimum sr range')

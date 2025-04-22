@@ -43,11 +43,11 @@ module.exports = {
             if (check) {
 
                 let hrArray = await aimScores.findAll({
-                where: { is_current: 1, username: check.username, mods: "+HR" },                 
+                where: { is_current: 1, user_id: check.osu_id, mods: "+HR" },                 
                 order: [["map_id", "DESC"]] })
 
                 let nmArray = await aimScores.findAll({
-                where: { is_current: 1, username: check.username, mods: "+NM" },                 
+                where: { is_current: 1, user_id: check.osu_id, mods: "+NM" },                 
                 order: [["map_id", "DESC"]] })
 
                 let maps = await aimLists.findAll({    
@@ -57,6 +57,7 @@ module.exports = {
                         ]}
                     )
                 // ITS SHIT
+
                 if(collectionName.length > 0){
                     console.log("please "+collectionName)
                     maps = await aimLists.findAll({
@@ -70,10 +71,10 @@ module.exports = {
                         return message.channel.send("couldnt find collection")
                     }
                     hrArray = await aimScores.findAll({
-                    where: { collection: collectionName, username: check.username, mods: "+HR" },                 
+                    where: { collection: collectionName, user_id: check.osu_id, mods: "+HR" },                 
                     order: [["map_id", "DESC"]] })
                     nmArray = await aimScores.findAll({
-                    where: { collection: collectionName, username: check.username, mods: "+NM" },                 
+                    where: { collection: collectionName, user_id: check.osu_id, mods: "+NM" },                 
                     order: [["map_id", "DESC"]] })
                 }
 
@@ -127,6 +128,7 @@ module.exports = {
                 console.log(nmArray.length)
                 let leftoversNM = "no scores found";
                 if (nmArray.length == maps.length) {
+                    console.log("poop")
                     nmString = "\n";
                     for (score in nmArray) {
                         nmMisscount = nmMisscount + nmArray[score].misscount;
