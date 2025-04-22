@@ -22,7 +22,11 @@ module.exports = {
             let username = "";
             if(msg.indexOf("u=") == -1){
                 const self = await osuUsers.findOne({ where: { user_id: message.author.id } });
+                if(self){
                 username = self.username
+                } else {
+                    return await message.channel.send("use /osuset first")
+                }
                 collectionStr = msg.length;
             } else {
                 username = msg.substring(msg.indexOf("u=") + 2)
@@ -36,7 +40,11 @@ module.exports = {
             console.log(username)
             if (msg === ".misscount"){
                 const self = await osuUsers.findOne({ where: { user_id: message.author.id } });
-                username = self.username
+                if(self){
+                    username = self.username
+                    } else {
+                        return await message.channel.send("use /osuset first")
+                    }
                 is_current = 1;
             }
             const check = await osuUsers.findOne({ where: { username: username } });
@@ -139,6 +147,7 @@ module.exports = {
                         }       
                     }
                     nmBool = true
+                    
                     nmString = " **" + nmString + "**"
                     leftoversNM = "";
                 } else if (nmArray.length < maps.length) {

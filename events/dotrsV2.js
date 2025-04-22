@@ -210,6 +210,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     let modleaderboardIndex = "";
     let embedColor = lightskyblue;
     let rank = "";
+    let leaderboardMods = "";
     if (topPlayIndex != 0 && globalTopIndex != 0) {
         specialString = "**__New Top Play (#" + topPlayIndex + ") and Global Top #" + globalTopIndex + "!__** ";
     }
@@ -233,6 +234,11 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     }
     if (topPlayIndex == 1) {
         embedColor = white;
+    }
+    if (modString.includes("HR")){
+        leaderboardMods = "+HR"
+    } else {
+        leaderboardMods = "+NM"
     }
     switch (score.rank) {
         case "SSH":
@@ -264,6 +270,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
             break;
     }
     console.log(specialString);
+
     let diffValues = await findMapStats(blob, beatmap, clockRate, cs);
     let t = score.created_at;
     let date = Date.parse(t);
@@ -272,6 +279,8 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     let collectionIndex = 0;
     let collectionLength = 0;
     let collectionString = "";
+    let timestamp = Math.floor(date / 1000); //remove last subtraction after dst
+
     const aimMap = await aimLists.findOne({where: {map_id: beatmap.id}})
 
     if(aimMap){
@@ -288,6 +297,27 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         }
         collectionName = aimMap.collection
         collectionLength = maps.length
+        if(beatmap.status == "graveyard" || beatmap.status == "wip" || beatmap.status == "pending"){
+            if(progress == ""){
+                checking = true;
+                i = 0;
+                let rank = 0;
+                const scores = await aimScores.findAll({where: {map_id: beatmap.id, mods: leaderboardMods}, order: [["misscount", "ASC"]]})
+                while(checking){
+                    const found = await aimScores.findOne({where: {map_id: beatmap.id, mods: leaderboardMods, user_id: user.id}})
+                    if(found.user_id == scores[i].user_id){
+                        rank = Number(i) + 1;
+                        checking = false;
+                    }
+                    if(i == scores.length - 1){
+                        rank = Number(i) + 1;
+                        checking = false;
+                    }
+                    i++;
+                }
+                modleaderboardIndex = " **(#" + rank + ")**";
+            }   
+        }
     }
 
     if(collectionLength > 0){
@@ -296,7 +326,6 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     
     if (blob.fcPP < blob.currPP)
         fcPPString = "";
-    let timestamp = Math.floor(date / 1000); //remove last subtraction after dst
     let rsEmbed = new EmbedBuilder()
         .setAuthor({
             name: "Most recent score by " + user.username + ":",
@@ -354,7 +383,6 @@ async function inputScore(blob, score, acc, modArray) {
             console.log("existing score found")
             if (score.statistics.count_miss < aimScore.misscount) {
                 const diff = score.statistics.count_miss - aimScore.misscount
-                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + aimScore.misscount + " -> " + score.statistics.count_miss + ")"
                 aimScore.misscount = score.statistics.count_miss;
                 aimScore.score = score.score;
                 aimScore.accuracy = accuracy;
@@ -362,8 +390,25 @@ async function inputScore(blob, score, acc, modArray) {
                 aimScore.date = score.created_at;
                 aimScore.hidden = hidden;
                 console.log("updating misscount...")
-                console.log(string)
                 aimScore.save();
+                const scores = await aimScores.findAll({
+                    where: { map_id: score.beatmap.id },
+                    order: [
+                      ["misscount", "ASC"],
+                    ]
+                  })
+                let checking = true;
+                let i = 0;
+                let rank = 0;
+                while(checking){
+                    if(aimScore.misscount <= scores[i].misscount){
+                        rank = Number(i) + 1;
+                        checking = false;
+                    }
+                    i++;
+                }
+                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + aimScore.misscount + " -> " + score.statistics.count_miss + 
+                ")\nnew leaderboard rank: **#"+rank+"**/"+scores.length
                 return string
             }
             return ""
@@ -389,7 +434,23 @@ async function inputScore(blob, score, acc, modArray) {
                 hidden: hidden,
                 is_current: is_current
             });
-            return "logged new score into leaderboard!"
+            const scores = await aimScores.findAll({
+                where: { map_id: score.beatmap.id },
+                order: [
+                  ["misscount", "ASC"],
+                ]
+              })
+            let checking = true;
+            let i = 0;
+            let rank = 0;
+            while(checking){
+                if(score.statistics.count_miss <= scores[i].misscount){
+                    rank = Number(i) + 1;
+                    checking = false;
+                }
+                i++;
+            }
+            return "logged new score into "+validMap.collection+"!\nnew leaderboard rank: **#"+rank+"**/"+scores.length
         }
     }
 }

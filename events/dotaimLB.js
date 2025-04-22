@@ -15,13 +15,14 @@ async function buildEmbed(map, ind, maxIndex, user) {
     where: { map_id: map.map_id },
     order: [
       ["misscount", "ASC"],
+      ["date", "ASC"]
     ]
   })
   let scoreArray = ""
   if (scores.length < 1) {
     scoreArray = "**no scores yet :(**"
   } else {
-    name = "Current #1: " + scores[0].username + "\nmap: "+pageNum+"/"+limit;
+    name = "Current #1: " + scores[0].username + "\ncollection: " + map.collection;
     iconLink = scores[0].user_id
     for (score in scores) {
       let hidden = ""
@@ -33,11 +34,11 @@ async function buildEmbed(map, ind, maxIndex, user) {
         hidden = " (HD)"
       }
       if(bro.user_id == user){
-      scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/"+scores[score].user_id+")__** • **" + bro.combo + "x**/" + bro.max_combo + " • **" + bro.misscount + "** <:miss:1324410432450068555>** <t:" + timestamp + ":R>\n"
-        + bro.accuracy + "%  • **" + bro.score.toLocaleString() + "** " + bro.mods + hidden + "**\n")
+      scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/"+scores[score].user_id+")__** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R>\n **"
+        + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
       } else {
-      scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/"+scores[score].user_id+")** • **" + bro.combo + "x**/" + bro.max_combo + " • **" + bro.misscount + "** <:miss:1324410432450068555>** <t:" + timestamp + ":R>\n"
-        + bro.accuracy + "%  • **" + bro.score.toLocaleString() + "** " + bro.mods + hidden + "**\n")
+      scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/"+scores[score].user_id+")** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R>\n  **"
+        + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
       }
     }
   }
@@ -53,7 +54,7 @@ async function buildEmbed(map, ind, maxIndex, user) {
     .setDescription(`\n${scoreArray}`)
     .setColor(lightskyblue)
     .setFooter({
-      text: "collection: " + map.collection + "\nmapset by " + map.creator,
+      text: "map: "+pageNum+"/"+limit+"\nmapset by " + map.creator,
       iconURL: "https://a.ppy.sh/" + map.creatorID
     });
   //console.log(scoreEmbed)
