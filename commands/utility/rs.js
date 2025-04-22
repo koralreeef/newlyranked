@@ -264,6 +264,32 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     let t = score.created_at;
     let date = Date.parse(t);
     let fcPPString = "~~(" + blob.fcPP + "pp)~~";
+    let collectionName = ""
+    let collectionIndex = 0;
+    let collectionLength = 0;
+    let collectionString = "";
+    const aimMap = await aimLists.findOne({where: {map_id: beatmap.id}})
+    
+    if(aimMap){
+        const maps = await aimLists.findAll({where: {collection: aimMap.collection}, order: [["map_id", "DESC"]]})
+        let checking = true;
+        let i = 0;
+        while(checking){
+            const found = await aimLists.findOne({where: {map_id: beatmap.id}})
+            if(found.map_id === maps[i].map_id){
+                collectionIndex = Number(i) + 1;
+                checking = false;
+            }
+            i++;
+        }
+        collectionName = aimMap.collection
+        collectionLength = maps.length
+    }
+
+    if(collectionLength > 0){
+        collectionString = " map "+collectionIndex+"/"+collectionLength+" from "+collectionName
+    }
+
     if (blob.fcPP < blob.currPP)
         fcPPString = "";
     let timestamp = Math.floor(date / 1000); //remove last subtraction after dst
@@ -291,7 +317,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         )
         .setColor(embedColor)
         .setFooter({
-            text: beatmap.status + " mapset by " + beatmapset.creator,
+            text: collectionString + "\n"+ beatmap.status + " mapset by " + beatmapset.creator,
             iconURL: "https://a.ppy.sh/" + beatmapset.user_id
         });
     return rsEmbed;

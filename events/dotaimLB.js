@@ -1,11 +1,11 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
 const { Client } = require("osu-web.js");
 const { getAccessToken } = require('../helper.js');
-const { aimLists, aimScores } = require('../db/dbObjects.js');
+const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
 const { lightskyblue } = require("color-name");
 const regex = /^\.aimlbs/gm;
 
-async function buildEmbed(map, ind, maxIndex) {
+async function buildEmbed(map, ind, maxIndex, user) {
   const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "]"
   let name = "no misscount leader yet!"
   let iconLink = ""
@@ -32,8 +32,13 @@ async function buildEmbed(map, ind, maxIndex) {
       if (bro.hidden) {
         hidden = " (HD)"
       }
-      scoreArray = scoreArray + ("**#" + index + "** **" + bro.username + "** • **" + bro.combo + "x**/" + bro.max_combo + " • **" + bro.misscount + "** <:miss:1324410432450068555>** <t:" + timestamp + ":R>\n"
+      if(bro.user_id == user){
+      scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/"+scores[score].user_id+")__** • **" + bro.combo + "x**/" + bro.max_combo + " • **" + bro.misscount + "** <:miss:1324410432450068555>** <t:" + timestamp + ":R>\n"
         + bro.accuracy + "%  • **" + bro.score.toLocaleString() + "** " + bro.mods + hidden + "**\n")
+      } else {
+      scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/"+scores[score].user_id+")** • **" + bro.combo + "x**/" + bro.max_combo + " • **" + bro.misscount + "** <:miss:1324410432450068555>** <t:" + timestamp + ":R>\n"
+        + bro.accuracy + "%  • **" + bro.score.toLocaleString() + "** " + bro.mods + hidden + "**\n")
+      }
     }
   }
   
@@ -65,6 +70,8 @@ module.exports = {
       let mapIndex = -1;
       let collectionName = "";
       let collectionStr = 0;
+      const self = await osuUsers.findOne({ where: { user_id: message.author.id } });
+      const user = self.osu_id
       const epoch = Date.now();
 
       const forward = new ButtonBuilder()
@@ -120,7 +127,7 @@ module.exports = {
         if (ind > 0) backward.setDisabled(false)
       }
 
-      const leaderboard = await buildEmbed(aimList[ind], ind, maxIndex);
+      const leaderboard = await buildEmbed(aimList[ind], ind, maxIndex, user);
       if (aimList.length == 1) {
         return await message.channel.send({ embeds: [leaderboard] })
       }
@@ -140,7 +147,7 @@ module.exports = {
           forward.setDisabled(false);
           console.log("backwards");
           await m.update({
-            embeds: [await buildEmbed(aimList[ind], ind, maxIndex)],
+            embeds: [await buildEmbed(aimList[ind], ind, maxIndex, user)],
             components: [row],
           })
         }
@@ -150,14 +157,14 @@ module.exports = {
           backward.setDisabled(false);
           console.log("forwards");
           await m.update({
-            embeds: [await buildEmbed(aimList[ind], ind, maxIndex)],
+            embeds: [await buildEmbed(aimList[ind], ind, maxIndex, user)],
             components: [row2],
           })
         }
       });
       collector.on("end", async () => {
         await msgRef.edit({
-          embeds: [await buildEmbed(aimList[ind], ind, maxIndex)],
+          embeds: [await buildEmbed(aimList[ind], ind, maxIndex, user)],
           components: [],
         });
       });
