@@ -378,7 +378,8 @@ async function inputScore(blob, score, acc, modArray) {
         if (aimScore) {
             console.log("existing score found")
             if (score.statistics.count_miss < aimScore.misscount) {
-                const diff = score.statistics.count_miss - aimScore.misscount
+                const diff = score.statistics.count_miss - aimScore.misscount;
+                const oldMisscount = aimScore.misscount;
                 aimScore.misscount = score.statistics.count_miss;
                 aimScore.score = score.score;
                 aimScore.accuracy = accuracy;
@@ -398,13 +399,18 @@ async function inputScore(blob, score, acc, modArray) {
                 let i = 0;
                 let rank = 0;
                 while(checking){
-                    if(aimScore.misscount <= scores[i].misscount){
+                    const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id}, order: [["misscount", "ASC"]]})
+                    if(found.user_id == scores[i].user_id){
+                        rank = Number(i) + 1;
+                        checking = false;
+                    }
+                    if(i == scores.length - 1){
                         rank = Number(i) + 1;
                         checking = false;
                     }
                     i++;
                 }
-                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + aimScore.misscount + " -> " + score.statistics.count_miss + 
+                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + oldMisscount + " -> " + score.statistics.count_miss + 
                 ")\nnew leaderboard rank: **#"+rank+"**/"+scores.length
                 return string
             }
@@ -441,7 +447,12 @@ async function inputScore(blob, score, acc, modArray) {
             let i = 0;
             let rank = 0;
             while(checking){
-                if(score.statistics.count_miss <= scores[i].misscount){
+                const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id}, order: [["misscount", "ASC"]]})
+                if(found.user_id == scores[i].user_id){
+                    rank = Number(i) + 1;
+                    checking = false;
+                }
+                if(i == scores.length - 1){
                     rank = Number(i) + 1;
                     checking = false;
                 }

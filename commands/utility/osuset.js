@@ -25,14 +25,14 @@ module.exports = {
         const check = await osuUsers.findOne({ where: {user_id: id }});
         if(u){
             if(!check) {
-                await osuUsers.create({ user_id: id, username: osuName, osu_id: u.user_id });
+                await osuUsers.create({ user_id: id, username: u.username, osu_id: u.user_id });
                 console.log("hey guys");
-                return interaction.reply("registered "+osuName+"!");
+                return interaction.reply("registered "+u.username+"!");
             } else {
-                osuUsers.update({ username: osuName}, 
+                osuUsers.update({ username: u.username}, 
                     {where: {user_id: id} }
              )};
-             return interaction.reply("updated "+interaction.user.username+" to be "+osuName+"!");
+             return interaction.reply("updated "+interaction.user.username+" to be "+u.username+"!");
         } else{
         return interaction.reply("couldnt find player!");
         }
