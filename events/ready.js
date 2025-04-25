@@ -12,6 +12,7 @@ module.exports = {
 	name: Events.ClientReady,
 	once: true,
 	async execute(client) {
+		require('events').EventEmitter.defaultMaxListeners = 15;
 		client.user.setActivity('activity', { type: ActivityType.Custom, name: "custom", state: "watching camp pining hearts s5"});
 		client.user.setStatus(PresenceUpdateStatus.DoNotDisturb);
 		await client_cred();

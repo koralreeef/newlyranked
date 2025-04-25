@@ -1,7 +1,7 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
+const { leaderboardChannel } = require('../config.json');
 const { lightskyblue } = require("color-name");
-const { scores } = require('osu-api-extended/dist/routes/v2.js');
 let ending = "";
 
 async function buildEmbed() {
@@ -42,8 +42,10 @@ async function buildEmbed() {
           } else if (scoreNM.misscount < scoreHR.misscount){
             total = total + scoreNM.misscount
             nmMaps++;
-          } else if (scoreNM.misscount == scoreHR.misscount)
+          } else if (scoreNM.misscount == scoreHR.misscount){
             total = total + scoreNM.misscount
+            hrMaps++;
+          }
         } else {
           if(scoreNM){
             totalMaps++;
@@ -59,17 +61,10 @@ async function buildEmbed() {
         }
         if(totalMaps == unique.length) processing = false;
       }
-      if(nmMaps > hrMaps){
-        special = "(NM+)"
-        if(hrMaps == 0) special = "(NM++)"
-      }
-      else if(nmMaps < hrMaps){
-        special = "(HR+)"
-        if(nmMaps == 0) special = "(HR++)"
-      }
-      else if(nmMaps == hrMaps){
-        special = "(NM/HR)"
-      }
+      special = "("+nmMaps+" NM/"+hrMaps+" HR)"
+      if(hrMaps == 0) special = "("+nmMaps+" NM)"
+      if(nmMaps == 0) special = "("+hrMaps+" HR)"
+      
       //console.log(userIDs[id].username+": "+nmMaps+"/"+hrMaps)
       const leaderboardMap = {
         username: userIDs[id].username,
@@ -98,7 +93,7 @@ async function buildEmbed() {
       totalString = "**"+current.mapcount + "**/" + collection.length + " scores"
     }
     const pageNum = Number(user) + 1;
-    userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") " + current.misscount + " • ** <:miss:1324410432450068555> "+totalString+" **" +current.speciality+"**\n")
+    userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount + " ** <:miss:1324410432450068555> "+totalString+" **" +current.speciality+"**\n")
   }
   const d = new Date();
 
@@ -106,10 +101,9 @@ async function buildEmbed() {
     .setAuthor({ name: "Leaderboard for: " + collectionName + "\nCurrent misscount leader: "+validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
     .setDescription(userString)
     .setColor(lightskyblue)
-    .setFooter({ text: "updates every 15 minutes probably\nlast updated "+d.toUTCString()});
+    .setFooter({ text: "season theme: sped up songs\nlast updated "+d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount"});
   return scoreEmbed;
 }
-
 
 module.exports = {
   name: Events.MessageCreate,
@@ -126,7 +120,7 @@ module.exports = {
     */
     if(message.author.id == "1282417809455845479"){
       if(msg.includes("new leaderboard rank: ")){
-        const channel = message.client.channels.cache.get("1364153568684281877");
+        const channel = message.client.channels.cache.get(leaderboardChannel);
         const embed = await channel.messages.fetch("1364247309973458996");
         const collection = await buildEmbed();
         await embed.edit({ content: ending, embeds: [collection] });
@@ -134,8 +128,8 @@ module.exports = {
     }
     if (msg === ".r") {
       if (message.author.id == "109299841519099904") {
-        const channel = message.client.channels.cache.get("1281401565571452979");
-        const embed = await channel.messages.fetch("1364462119436812348");
+        const channel = message.client.channels.cache.get(leaderboardChannel);
+        const embed = await channel.messages.fetch("1364247309973458996");
         const collection = await buildEmbed();
         await embed.edit({ content: ending, embeds: [collection] });
       }
