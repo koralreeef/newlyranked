@@ -1,6 +1,6 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken } = require('../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, nmRole, hrRole, hundoRole } = require('../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
@@ -355,7 +355,8 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         });
     return rsEmbed;
 }
-async function inputScore(blob, score, acc, modArray) {
+async function inputScore(blob, score, acc, modArray, message) {
+    //const epoch = Date.now();
     let accuracy = acc.toFixed(2)
     let mods = "+"
     let hidden = false
@@ -374,10 +375,14 @@ async function inputScore(blob, score, acc, modArray) {
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, user_id: score.user_id, mods: mods },
     });
+    const currentCollection = await aimLists.findAll({
+        where: { collection: currentD1Collection },
+    });
     const validMap = await aimLists.findOne({
         where: { map_id: score.beatmap.id }
     })
-    console.log(validMap)
+    //console.log(validMap)
+    //check for time later
     if (validMap && score.passed) {
         if (aimScore) {
             console.log("existing score found")
@@ -424,6 +429,9 @@ async function inputScore(blob, score, acc, modArray) {
                 is_current = 1;
             }
             console.log("creating new score")
+            const preEntry = await aimScores.findAll({
+                where: {user_id: score.user_id, collection: currentD1Collection, mods: mods}
+              })
             await aimScores.create({
                 map_id: score.beatmap.id,
                 collection: validMap.collection,
@@ -446,6 +454,23 @@ async function inputScore(blob, score, acc, modArray) {
                   ["misscount", "ASC"],
                 ]
               })
+            const complete = await aimScores.findAll({
+                where: {user_id: score.user_id, collection: currentD1Collection, mods: mods}
+              })
+            console.log("asdad"+preEntry.length)
+            console.log("asd"+complete.length)
+            let congrats = "logged new score into "+validMap.collection+"!"
+            if(preEntry.length == currentCollection.length - 1 && complete.length == currentCollection.length){
+                const mod = mods.substring(1)
+                console.log("applied role")
+                congrats = "🎉 congrats on "+mod+" completion for "+validMap.collection+"! 🎉"
+                if(mod == "NM") await message.member.roles.add(nmRole).catch(console.error);
+                if(mod == "HR") await message.member.roles.add(hrRole).catch(console.error);
+                if(await message.member.roles.cache.has(nmRole) && await message.member.roles.cache.has(hrRole)){
+                    congrats = "🎉🎉🎉 congrats on 100% completion for "+validMap.collection+"!!! 🎉🎉🎉"
+                    message.member.roles.add(hundoRole).catch(console.error);
+                }
+            }
             let checking = true;
             let i = 0;
             let rank = 0;
@@ -461,14 +486,14 @@ async function inputScore(blob, score, acc, modArray) {
                 }
                 i++;
             }
-            return "logged new score into "+validMap.collection+"!\nnew leaderboard rank: **#"+rank+"**/"+scores.length
+            return congrats+"\nnew leaderboard rank: **#"+rank+"**/"+scores.length
         }
     }
 }
 module.exports = {
     name: Events.MessageCreate,
     async execute(message) {
-        let msg = message.content;
+        let msg = message.content.toLowerCase();
         let self = false;
         if (msg === ".rs") self = true;
         const r3 = regex3.test(msg.substring(0, msg.indexOf(" ")));
@@ -576,7 +601,7 @@ module.exports = {
                         ppData = await calcPP(score, map, total, modString)
                     }
 
-                    console.log(score);
+                    //console.log(score);
                     //console.log(ppData);   
                     // Free the beatmap manually to avoid risking memory leakage.
                     map.free();
@@ -689,7 +714,7 @@ module.exports = {
                     percentage = (total / percentage) * 100
                     let progress = "@" + Math.round(percentage) + "%";
                     if (percentage == 100) progress = "";
-                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods)
+                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message)
                     const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                     message.channel.send({ content: leaderboardString, embeds: [rsEmbed] });
                 } catch (err) {

@@ -25,11 +25,11 @@ module.exports = {
         const check = await osuUsers.findOne({ where: {user_id: id }});
         if(u){
             if(!check) {
-                await osuUsers.create({ user_id: id, username: u.username, osu_id: u.user_id });
+                await osuUsers.create({ user_id: id, username: u.username, osu_id: u.user_id, lower: u.username.toLowerCase() });
                 console.log("hey guys");
                 return interaction.reply("registered "+u.username+"!");
             } else {
-                osuUsers.update({ username: u.username}, 
+                osuUsers.update({ username: u.username, osu_id: u.osu_id, lower: u.username.toLowerCase()}, 
                     {where: {user_id: id} }
              )};
              return interaction.reply("updated "+interaction.user.username+" to be "+u.username+"!");

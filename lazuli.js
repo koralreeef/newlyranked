@@ -5,7 +5,8 @@ const { token, testtoken } = require('./config.json');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, 
                                         GatewayIntentBits.GuildMessages, 
                                         GatewayIntentBits.MessageContent, 
-                                        GatewayIntentBits.DirectMessages] });
+                                        GatewayIntentBits.DirectMessages,
+										GatewayIntentBits.GuildMessageReactions,] });
 //moved index.js
 client.cooldowns = new Collection(); //command cooldowns
 client.commands = new Collection(); //reload.js

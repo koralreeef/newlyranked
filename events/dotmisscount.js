@@ -30,6 +30,7 @@ module.exports = {
                 collectionStr = msg.length;
             } else {
                 username = msg.substring(msg.indexOf("u=") + 2)
+                
                 collectionStr = msg.indexOf("u=") - 1;
             }
             let collectionName = "";
@@ -47,7 +48,7 @@ module.exports = {
                     }
                 is_current = 1;
             }
-            const check = await osuUsers.findOne({ where: { username: username } });
+            const check = await osuUsers.findOne({ where: { lower: username.toLowerCase() } });
             if (check) {
 
                 let hrArray = await aimScores.findAll({
@@ -191,7 +192,7 @@ module.exports = {
                 if(totalMisscount == 0)
                     totalMisscount = -1;
                 const misscountEmbed = new EmbedBuilder()
-                    .setAuthor({ name: "misscount totals for "+username+"\ncollection: "+maps[0].collection,
+                    .setAuthor({ name: "misscount totals for "+check.username+"\ncollection: "+maps[0].collection,
                         iconURL: "https://a.ppy.sh/"+check.osu_id
                     })
                     .setDescription("hr misscount: **"+hrMisscount+"**"+hrString

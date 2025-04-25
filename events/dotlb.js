@@ -2,10 +2,10 @@ const fs = require("fs")
 const { Events, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const { Client, calcAccuracy  } = require("osu-web.js");
 const { lightskyblue } = require('color-name');
-const { getBeatmapID } = require("../helper.js");
+const { getBeatmapID, getAccessToken } = require("../helper.js");
 const { clientIDv2, clientSecret, AccessToken } = require("../config.json")
 const { tools, v2, auth } = require('osu-api-extended')
-const { osuUsers } = require('../db/dbObjects.js');
+const { osuUsers, aimLists } = require('../db/dbObjects.js');
 const axios = require('axios');
 const rosu = require("rosu-pp-js");
 //refresh every hour for new tokens gg
@@ -230,7 +230,7 @@ const start = async (bID, mod, name, button) => {
     scoreString = scoreString + "\n__**"+name+"'s score:**__ \n"+userScore;
     scoreArray.push(scoreString);
     //list = scoreArray.join('\n');
-    let title = "Leaderboard for "+beatmap.beatmapset.artist+" - "+beatmap.beatmapset.title+" ["+beatmap.version+"]["+maxAttrs.difficulty.stars.toFixed(2)+"✰] +"+modString;
+    let title = "Leaderboard for "+beatmap.beatmapset.artist+" - "+beatmap.beatmapset.title+" ["+beatmap.version+"] ["+maxAttrs.difficulty.stars.toFixed(2)+"✰] +"+modString;
 
     return {beatmap: beatmap, first: first, list: list, title: title};
     //https://github.com/ppy/osu-api/wiki#apiget_scores for bitwise conversion
@@ -247,6 +247,20 @@ module.exports = {
         let msg = message.content;
         console.log(msg.substring(0, 5));
         if(msg.substring(0, 5) === ".lb +" || msg === ".lb"){
+            let api = new Client(await getAccessToken());
+            try{
+            const beatmap = await api.beatmaps.getBeatmap(getBeatmapID());
+            if(beatmap.ranked < 1){ 
+              const found = await aimLists.findOne({ where: {map_id: beatmap.id}})
+              if(found){
+              return await message.channel.send("this map is unranked; use .aimlbs c="+found.collection+" instead")
+              } else {
+                return await message.channel.send("this map is unranked; it might not have a leaderboard currently. poke koral to give it one")
+              }
+            }
+            } catch (err) {
+              return await message.channel.send("no map for bot to check lb for")
+            }
             let ind = 0;
             const epoch = Date.now();
         

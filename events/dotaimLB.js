@@ -1,4 +1,4 @@
-const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { Client } = require("osu-web.js");
 const { getAccessToken } = require('../helper.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
@@ -9,9 +9,10 @@ async function buildEmbed(map, ind, maxIndex, user) {
   const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "]"
   let name = "no misscount leader yet!"
   let iconLink = ""
-  let pageNum = ind + 1;
+  let pageNum = Number(ind) + 1;
   let limit = maxIndex + 1;
   const scores = await aimScores.findAll({
+    limit: 15,
     where: { map_id: map.map_id },
     order: [
       ["misscount", "ASC"],
@@ -33,16 +34,16 @@ async function buildEmbed(map, ind, maxIndex, user) {
       if (bro.hidden) {
         hidden = " (HD)"
       }
-      if(bro.user_id == user){
-      scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/"+scores[score].user_id+")__** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R>\n **"
-        + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
+      if (bro.user_id == user) {
+        scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")__** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R>\n **"
+          + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
       } else {
-      scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/"+scores[score].user_id+")** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R>\n  **"
-        + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
+        scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R>\n  **"
+          + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
       }
     }
   }
-  
+
   scoreEmbed = new EmbedBuilder()
     .setAuthor({
       name: name,
@@ -54,7 +55,7 @@ async function buildEmbed(map, ind, maxIndex, user) {
     .setDescription(`\n${scoreArray}`)
     .setColor(lightskyblue)
     .setFooter({
-      text: "map: "+pageNum+"/"+limit+"\nmapset by " + map.creator,
+      text: "map: " + pageNum + "/" + limit + "\nmapset by " + map.creator,
       iconURL: "https://a.ppy.sh/" + map.creatorID
     });
   //console.log(scoreEmbed)
@@ -80,14 +81,33 @@ module.exports = {
         .setLabel("⟶")
         .setStyle(ButtonStyle.Primary);
 
+      const modal = new ButtonBuilder()
+        .setCustomId("modal" + epoch)
+        .setLabel("🔢")
+        .setStyle(ButtonStyle.Primary);
+
       const backward = new ButtonBuilder()
         .setCustomId("back" + epoch)
         .setDisabled(true)
         .setLabel("⟵")
         .setStyle(ButtonStyle.Primary);
-        
-      const row = new ActionRowBuilder().addComponents(backward, forward);
-      const row2 = new ActionRowBuilder().addComponents(backward, forward);
+
+      const modal1 = new ModalBuilder({
+        customId: "modal" + epoch,
+        title: "jump to a page",
+      });
+
+      const favoriteColorInput = new TextInputBuilder({
+        customId: "page num" + epoch,
+        label: "page number",
+        style: TextInputStyle.Short,
+      })
+
+      const modalRow = new ActionRowBuilder().addComponents(favoriteColorInput);
+      modal1.addComponents(modalRow)
+      const row = new ActionRowBuilder().addComponents(backward, modal, forward);
+      const row2 = new ActionRowBuilder().addComponents(backward, modal, forward);
+      const row3 = new ActionRowBuilder().addComponents(backward, modal, forward);
 
       if (msg.indexOf("c=") == -1) {
         collectionStr = msg.length;
@@ -126,6 +146,7 @@ module.exports = {
         if (mapIndex >= aimList.length) return await message.channel.send("index is out of bounds for this collection; try a lower number")
         ind = mapIndex;
         if (ind > 0) backward.setDisabled(false)
+        if (ind == maxIndex) forward.setDisabled(false)
       }
 
       const leaderboard = await buildEmbed(aimList[ind], ind, maxIndex, user);
@@ -161,6 +182,39 @@ module.exports = {
             embeds: [await buildEmbed(aimList[ind], ind, maxIndex, user)],
             components: [row2],
           })
+        }
+        //button to switch between pp and misscount lbs
+        if (m.customId === "modal" + epoch) {
+          let backup = ind;
+          await m.showModal(modal1)
+          const filter = (m) => m.customId === "modal" + epoch;
+          m.awaitModalSubmit({ filter, time: 60_000 })
+            .then(async (m) => {
+              ind = Number(m.fields.getTextInputValue("page num" + epoch)) - 1
+              if (ind > -1 && ind <= maxIndex) {
+                if(ind == 0) {
+                  backward.setDisabled(true);
+                  forward.setDisabled(false);
+                }
+                if(ind == maxIndex) {
+                  backward.setDisabled(false);
+                  forward.setDisabled(true);
+                }
+                await m.update({
+                  embeds: [await buildEmbed(aimList[ind], ind, maxIndex, user)],
+                  components: [row3],
+                })
+              } else {
+                ind = backup;
+                await m.update({
+                  embeds: [await buildEmbed(aimList[ind], ind, maxIndex, user)],
+                  components: [row3],
+                })
+              }
+            })
+            .catch(async (err) => {
+              console.log(err);
+            })
         }
       });
       collector.on("end", async () => {

@@ -24,7 +24,7 @@ async function buildEmbed(maps) {
     .setAuthor({ name: "Current collection: " + collectionName })
     .setDescription(mapArray + "\nraw map IDs below; **click the top right of the window to copy the list**``` " + mapIDs + "```")
     .setColor(lightskyblue)
-    .setFooter({ text: "have fun!" });
+    .setFooter({ text: "season theme: sped up songs" });
   console.log(scoreEmbed)
   return scoreEmbed;
 }

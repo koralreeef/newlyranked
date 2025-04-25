@@ -7,6 +7,9 @@ module.exports = (sequelize, DataTypes) => {
         username: {
             type: DataTypes.STRING,
         },
+		lower: {
+            type: DataTypes.STRING,
+        },
 		osu_id: {
 			type: DataTypes.STRING,
 			primaryKey: true,

@@ -1,10 +1,11 @@
 const { Events } = require('discord.js');
-const { setBeatmapID } = require('../helper.js')
-const regex = /^\.osu \d{1,7}/gm;
+const { Client } = require("osu-web.js");
+const { getAccessToken } = require('../helper.js')
+const regex = /^\.osu \D{1,7}/gm;
 
 module.exports = {
-	name: Events.MessageCreate,
-	async execute(message) {
+    name: Events.MessageCreate,
+    async execute(message) {
         let msg = message.content;
         /*
         console.log(message.type);
@@ -16,10 +17,18 @@ module.exports = {
         console.log(message.content);
         */
         if (regex.test(msg)){
-            let beatmapID = msg.substring(5);
-            setBeatmapID(beatmapID);
-            message.channel.send("https://osu.ppy.sh/b/"+beatmapID);
-            console.log("https://osu.ppy.sh/b/"+beatmapID);
+            let api = new Client(await getAccessToken());
+            let input = msg.substring(5);
+            try{
+            const user = await api.users.getUser(input, {
+                urlParams: {
+                  mode: 'osu'
+                }
+              });
+            return message.channel.send("https://osu.ppy.sh/users/"+user.id);
+            } catch (err) {
+                return message.channel.send("couldnt find user");
+            }
         }
     }
 }
