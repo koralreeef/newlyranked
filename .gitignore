@@ -4,6 +4,7 @@ config-dev.json
 config-prod.json
 database.sqlite
 database-old.sqlite
+42725.sqlite
 images
 samples
 maps

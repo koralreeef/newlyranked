@@ -1,12 +1,16 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
-const { leaderboardChannel } = require('../config.json');
+const { leaderboardChannel, leaderboardMessage, currentD1Collection, currentD2Collection, botID } = require('../config.json');
+const { setDivToggle, getDivToggle } = require('../helper.js');
 const { lightskyblue } = require("color-name");
 let ending = "";
 
-async function buildEmbed() {
+async function buildEmbed(toggle) {
+  console.log("poop")
   const userIDs = await osuUsers.findAll()
-  const collection = await aimLists.findAll({ where: { is_current: 1 } })
+  let divName = currentD1Collection;
+  if(toggle) divName = currentD2Collection;
+  const collection = await aimLists.findAll({ where: { collection: divName } })
   const validUsers = []
   const collectionName = collection[0].collection
   let userString = "";
@@ -17,9 +21,9 @@ async function buildEmbed() {
     let totalMaps = 0;
     let nmMaps = 0;
     let hrMaps = 0;
-    const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id } })
+    const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, collection: divName } })
     if (found) {
-      const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, is_current: 1 } })
+      const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, collection: divName } })
       const mapIDs = []
       const unique = []
       //???
@@ -29,11 +33,10 @@ async function buildEmbed() {
           unique.push(scores[score])
         }
       }
-      //console.log(mapIDs)
       let processing = true
       while(processing) {
-        const scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, is_current: 1, mods: "+NM" } })
-        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, is_current: 1, mods: "+HR" } })
+        const scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM" } })
+        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR" } })
         if (scoreNM && scoreHR) {
           totalMaps++;
           if (scoreNM.misscount > scoreHR.misscount) {
@@ -118,19 +121,20 @@ module.exports = {
     }
     console.log(message.content);
     */
-    if(message.author.id == "1282417809455845479"){
+    if(message.author.id == botID){
+      console.log(msg)
       if(msg.includes("new leaderboard rank: ")){
         const channel = message.client.channels.cache.get(leaderboardChannel);
-        const embed = await channel.messages.fetch("1364247309973458996");
-        const collection = await buildEmbed();
+        const embed = await channel.messages.fetch(leaderboardMessage);
+        const collection = await buildEmbed(getDivToggle());
         await embed.edit({ content: ending, embeds: [collection] });
       }
     }
     if (msg === ".r") {
       if (message.author.id == "109299841519099904") {
         const channel = message.client.channels.cache.get(leaderboardChannel);
-        const embed = await channel.messages.fetch("1364247309973458996");
-        const collection = await buildEmbed();
+        const embed = await channel.messages.fetch(leaderboardMessage);
+        const collection = await buildEmbed(getDivToggle());
         await embed.edit({ content: ending, embeds: [collection] });
       }
     }

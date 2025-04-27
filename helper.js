@@ -11,6 +11,8 @@ var commonSR = 60;
 var SSR = 90;
 let beatmapID = 0;
 let api = "";
+let divToggle = false;
+let ppToggle = false;
 function getLifetime(id) {
 	const user = currency.get(id);
 	return user ? user.lifetime : 0;
@@ -74,6 +76,22 @@ function setBeatmapID(id) {
 	beatmapID = id;
 }   
 
+function setDivToggle(toggle) {
+	divToggle = toggle;
+}   
+
+function getDivToggle() {
+	return divToggle;
+}   
+
+function setPPToggle(toggle) {
+	ppToggle = toggle;
+}   
+
+function getPPToggle() {
+	return ppToggle;
+}   
+
 function getBeatmapID(id) {
 	return beatmapID;
 }   
@@ -97,4 +115,6 @@ module.exports = { currency, commonSR, SSR,
 				   addBalance, wipeBalance, getBalance, 
 				   getBeatmapID, setBeatmapID,
 				   downloadFile, sleep,
-				   client_cred, getAccessToken };
+				   client_cred, getAccessToken,
+				   setDivToggle, setPPToggle,
+				   getDivToggle, getPPToggle };

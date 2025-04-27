@@ -3,7 +3,7 @@ const { Events, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ActionRowBuilder
 const { Client, calcAccuracy  } = require("osu-web.js");
 const { lightskyblue } = require('color-name');
 const { getBeatmapID, getAccessToken } = require("../helper.js");
-const { clientIDv2, clientSecret, AccessToken } = require("../config.json")
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection } = require("../config.json")
 const { tools, v2, auth } = require('osu-api-extended')
 const { osuUsers, aimLists } = require('../db/dbObjects.js');
 const axios = require('axios');
@@ -253,6 +253,12 @@ module.exports = {
             if(beatmap.ranked < 1){ 
               const found = await aimLists.findOne({ where: {map_id: beatmap.id}})
               if(found){
+                if(found.collection == currentD1Collection){
+                  return await message.channel.send("this map is unranked; use .aimlbs instead")
+                }
+                if(found.collection == currentD2Collection){
+                  return await message.channel.send("this map is unranked; use .aimlbs2 instead")
+                }
               return await message.channel.send("this map is unranked; use .aimlbs c="+found.collection+" instead")
               } else {
                 return await message.channel.send("this map is unranked; it might not have a leaderboard currently. poke koral to give it one")

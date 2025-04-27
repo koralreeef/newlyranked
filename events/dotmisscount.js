@@ -1,6 +1,6 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
-const { currentD2Collection } = require('../config.json');
+const { currentD1Collection, currentD2Collection } = require('../config.json');
 const { lightskyblue } = require("color-name");
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
@@ -39,10 +39,12 @@ module.exports = {
             let collectionName = "";
             if(msg.indexOf("c=") > 0){
                 collectionName = msg.substring(msg.indexOf("c=") + 2, collectionStr);
+            } else {
+                collectionName = currentD1Collection;
             }
             if(msg.substring(10, 11) == "2") {
                 collectionName = currentD2Collection;
-            }
+            } 
             console.log(collectionName)
             console.log(username)
             if (msg === ".misscount"){

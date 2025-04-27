@@ -1,6 +1,6 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken, currentD1Collection, nmRole, hrRole, hundoRole } = require('../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, hundoRole } = require('../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
@@ -374,16 +374,21 @@ async function inputScore(blob, score, acc, modArray, message) {
     } else {
         mods = mods + "NM";
     }
+
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, user_id: score.user_id, mods: mods },
-    });
-    const currentCollection = await aimLists.count({
-        where: { collection: currentD1Collection },
     });
     const validMap = await aimLists.findOne({
         where: { map_id: score.beatmap.id }
     })
-    //console.log(validMap)
+    let collectionName = currentD1Collection;
+    if(validMap.collection == currentD2Collection){
+        collectionName = currentD2Collection
+    }
+    const currentCollection = await aimLists.count({
+        where: { collection: collectionName },
+    });
+    console.log("check check"+validMap)
     //check for time later
     if (validMap && score.passed) {
         if (aimScore) {
@@ -433,7 +438,7 @@ async function inputScore(blob, score, acc, modArray, message) {
             }
             console.log("creating new score")
             const preEntry = await aimScores.count({
-                where: {user_id: score.user_id, collection: currentD1Collection, mods: mods}
+                where: {user_id: score.user_id, collection: collectionName, mods: mods}
               })
             await aimScores.create({
                 map_id: score.beatmap.id,
@@ -459,7 +464,7 @@ async function inputScore(blob, score, acc, modArray, message) {
                 ]
               })
             const complete = await aimScores.count({
-                where: {user_id: score.user_id, collection: currentD1Collection, mods: mods}
+                where: {user_id: score.user_id, collection: collectionName, mods: mods}
               })
             console.log("asdad"+preEntry)
             console.log("asd"+complete)
@@ -468,8 +473,16 @@ async function inputScore(blob, score, acc, modArray, message) {
                 const mod = mods.substring(1)
                 console.log("applied role")
                 congrats = "🎉 congrats on "+mod+" completion for "+validMap.collection+"! 🎉"
-                if(mod == "NM") await message.member.roles.add(nmRole).catch(console.error);
-                if(mod == "HR") await message.member.roles.add(hrRole).catch(console.error);
+                //redo conditionals for giving hundo role
+                //get guild member object from the user id from the score, not the message
+                if(collectionName == currentD1Collection){
+                    if(mod == "NM") await message.member.roles.add(nmRole).catch(console.error);
+                    if(mod == "HR") await message.member.roles.add(hrRole).catch(console.error);
+                } else if(collectionName == currentD2Collection){
+                    if(mod == "NM") await message.member.roles.add("1366104494072401980").catch(console.error);
+                    if(mod == "HR") await message.member.roles.add("1366104856502468750").catch(console.error);
+                }
+                //fix this
                 if(await message.member.roles.cache.has(nmRole) && await message.member.roles.cache.has(hrRole)){
                     congrats = "🎉🎉🎉 congrats on 100% completion for "+validMap.collection+"!!! 🎉🎉🎉"
                     message.member.roles.add(hundoRole).catch(console.error);

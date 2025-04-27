@@ -1,6 +1,7 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
 const { leaderboardChannel, leaderboardMessage, currentD1Collection, currentD2Collection } = require('../config.json');
+const { setDivToggle, setPPToggle } = require('../helper.js');
 const { lightskyblue } = require("color-name");
 let ending = "";
 
@@ -312,9 +313,11 @@ module.exports = {
             if (m.customId == "toggle" + epoch) {
                 if (!ppToggle.pp) {
                     ppToggle.pp = true;
+                    setPPToggle(true);
                     toggle.setLabel("misscount boards")
                 } else if(ppToggle.pp) {
                     ppToggle.pp = false;
+                    setPPToggle(false);
                     toggle.setLabel("score boards")
                 }
                 if (currentMod != "none") {
@@ -332,9 +335,11 @@ module.exports = {
             if (m.customId == "divToggle" + epoch) {
                 if (!ppToggle.div) {
                     ppToggle.div = true;
+                    setDivToggle(true);
                     divToggle.setLabel("to div1 boards")
                 } else if (ppToggle.div) {
                     ppToggle.div = false;
+                    setDivToggle(false);
                     divToggle.setLabel("to div2 boards")
                 }
                 if (currentMod != "none") {

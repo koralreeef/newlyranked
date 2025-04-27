@@ -89,6 +89,13 @@ module.exports = {
         .setLabel("🔢")
         .setStyle(ButtonStyle.Primary);
 
+      //if magnify, show different build embed and then show lbs in 15
+      //maybe have a command for this aswell
+      const magnify = new ButtonBuilder()
+      .setCustomId("magnify" + epoch)
+      .setLabel("🔎")
+      .setStyle(ButtonStyle.Primary);
+
       const backward = new ButtonBuilder()
         .setCustomId("back" + epoch)
         .setDisabled(true)
