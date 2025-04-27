@@ -1,6 +1,9 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
+const { currentD2Collection } = require('../config.json');
 const { lightskyblue } = require("color-name");
+const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
 
 const regex = /^\.misscount/gm;
 
@@ -37,6 +40,9 @@ module.exports = {
             if(msg.indexOf("c=") > 0){
                 collectionName = msg.substring(msg.indexOf("c=") + 2, collectionStr);
             }
+            if(msg.substring(10, 11) == "2") {
+                collectionName = currentD2Collection;
+            }
             console.log(collectionName)
             console.log(username)
             if (msg === ".misscount"){
@@ -48,19 +54,25 @@ module.exports = {
                     }
                 is_current = 1;
             }
-            const check = await osuUsers.findOne({ where: { lower: username.toLowerCase() } });
+            const check = await osuUsers.findOne({ 
+                where: { 
+                    username: {
+                        [Op.like]: username.toLowerCase() 
+                    }
+                }, 
+            });
             if (check) {
 
                 let hrArray = await aimScores.findAll({
-                where: { is_current: 1, user_id: check.osu_id, mods: "+HR" },                 
+                where: { collection: collectionName, user_id: check.osu_id, mods: "+HR" },                 
                 order: [["map_id", "DESC"]] })
 
                 let nmArray = await aimScores.findAll({
-                where: { is_current: 1, user_id: check.osu_id, mods: "+NM" },                 
+                where: { collection: collectionName, user_id: check.osu_id, mods: "+NM" },                 
                 order: [["map_id", "DESC"]] })
 
                 let maps = await aimLists.findAll({    
-                    where: { is_current: 1 },     
+                    where: { collection: collectionName },     
                     order: [
                         ["map_id", "DESC"],
                         ]}

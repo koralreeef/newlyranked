@@ -23,7 +23,7 @@ function getLength(s) {
 async function findMapStats(blob, beatmap, clockRate, cs) {
     const mapCS = "CS:  " + (cs).toFixed(2);
     const mapAR = "  AR:  " + (blob.stats.difficulty.ar).toFixed(2);
-    const mapOD = "  OD:  " + (blob.stats.difficulty.od).toFixed(2);
+    const mapOD = "  OD:  " + (beatmap.accuracy).toFixed(2);
     const mapBPM = "\nBPM:  " + (beatmap.bpm * clockRate).toFixed(2);
     const mapLength = "  Length:  " + getLength(beatmap.hit_length);
     return mapCS + mapAR + mapOD + mapBPM + mapLength;
@@ -357,6 +357,8 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
 }
 async function inputScore(blob, score, acc, modArray, message) {
     //const epoch = Date.now();
+    //store two versions of best score
+    //ugh thats so annoying man
     let accuracy = acc.toFixed(2)
     let mods = "+"
     let hidden = false
@@ -375,7 +377,7 @@ async function inputScore(blob, score, acc, modArray, message) {
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, user_id: score.user_id, mods: mods },
     });
-    const currentCollection = await aimLists.findAll({
+    const currentCollection = await aimLists.count({
         where: { collection: currentD1Collection },
     });
     const validMap = await aimLists.findOne({
@@ -391,6 +393,7 @@ async function inputScore(blob, score, acc, modArray, message) {
                 const oldMisscount = aimScore.misscount;
                 aimScore.misscount = score.statistics.count_miss;
                 aimScore.score = score.score;
+                aimScore.pp = blob.currPP;
                 aimScore.accuracy = accuracy;
                 aimScore.combo = score.max_combo;
                 aimScore.date = score.created_at;
@@ -429,7 +432,7 @@ async function inputScore(blob, score, acc, modArray, message) {
                 is_current = 1;
             }
             console.log("creating new score")
-            const preEntry = await aimScores.findAll({
+            const preEntry = await aimScores.count({
                 where: {user_id: score.user_id, collection: currentD1Collection, mods: mods}
               })
             await aimScores.create({
@@ -439,6 +442,7 @@ async function inputScore(blob, score, acc, modArray, message) {
                 user_id: score.user_id,
                 username: score.user.username,
                 mods: mods,
+                pp: blob.currPP,
                 score: score.score,
                 accuracy: accuracy,
                 misscount: score.statistics.count_miss,
@@ -454,13 +458,13 @@ async function inputScore(blob, score, acc, modArray, message) {
                   ["misscount", "ASC"],
                 ]
               })
-            const complete = await aimScores.findAll({
+            const complete = await aimScores.count({
                 where: {user_id: score.user_id, collection: currentD1Collection, mods: mods}
               })
-            console.log("asdad"+preEntry.length)
-            console.log("asd"+complete.length)
+            console.log("asdad"+preEntry)
+            console.log("asd"+complete)
             let congrats = "logged new score into "+validMap.collection+"!"
-            if(preEntry.length == currentCollection.length - 1 && complete.length == currentCollection.length){
+            if(preEntry == currentCollection - 1 && complete == currentCollection){
                 const mod = mods.substring(1)
                 console.log("applied role")
                 congrats = "🎉 congrats on "+mod+" completion for "+validMap.collection+"! 🎉"
@@ -714,6 +718,7 @@ module.exports = {
                     percentage = (total / percentage) * 100
                     let progress = "@" + Math.round(percentage) + "%";
                     if (percentage == 100) progress = "";
+                    //console.log(score);
                     const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message)
                     const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                     message.channel.send({ content: leaderboardString, embeds: [rsEmbed] });

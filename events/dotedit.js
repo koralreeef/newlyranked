@@ -1,6 +1,7 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { aimLists } = require('../db/dbObjects.js');
 const { lightskyblue } = require("color-name");
+const { collectionChannel, collectionMessage, currentD2Collection } = require('../config.json');
 let ending = "";
 
 async function buildEmbed(maps) {
@@ -19,7 +20,7 @@ async function buildEmbed(maps) {
     }
   }
   console.log(mapIDs)
-  ending = collectionName + " ends <t:1747094580:R>"
+  ending = "season 0 ends <t:1747094580:R>"
   const scoreEmbed = new EmbedBuilder()
     .setAuthor({ name: "Current collection: " + collectionName })
     .setDescription(mapArray + "\nraw map IDs below; **click the top right of the window to copy the list**``` " + mapIDs + "```")
@@ -44,8 +45,8 @@ module.exports = {
     */
     if (msg === ".refresh") {
       if (message.author.id == "109299841519099904") {
-        const channel = message.client.channels.cache.get("1364011416276697218");
-        const embed = await channel.messages.fetch("1364015474341449821");
+        const channel = message.client.channels.cache.get(collectionChannel);
+        const embed = await channel.messages.fetch(collectionMessage);
         const maps = await aimLists.findAll({
           where: { is_current: 1 },
           order: [

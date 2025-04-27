@@ -15,6 +15,7 @@ async function buildEmbed(maps) {
         collectionName = current.collection
       }
     }
+    console.log(mapArray)
   }
   const scoreEmbed = new EmbedBuilder()
     .setAuthor({ name: "Current collection: " + collectionName })
@@ -41,7 +42,7 @@ module.exports = {
     if (collectionName.length > 0) {
       console.log(collectionName)
       const check = await aimLists.findAll({where: {collection: collectionName}})
-      if(check.length < 1) return await message.channel.send("no collection found");
+      if(check < 1) return await message.channel.send("no collection found");
       const collection = await buildEmbed(check);
       collection.setAuthor({ name: "Listed collection: "+collectionName })
       return message.channel.send({ embeds: [collection] });

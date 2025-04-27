@@ -2,7 +2,10 @@ const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, Moda
 const { Client } = require("osu-web.js");
 const { getAccessToken } = require('../helper.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
+const { currentD2Collection } = require('../config.json');
 const { lightskyblue } = require("color-name");
+const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
 const regex = /^\.aimlbs/gm;
 
 async function buildEmbed(map, ind, maxIndex, user) {
@@ -125,10 +128,23 @@ module.exports = {
           ["map_id", "DESC"],
         ]
       });
-
+      //VERY BAD LMAO
+      console.log(msg.substring(8, 9))
+      if(msg.substring(7, 8) == "2") {
+        aimList = await aimLists.findAll({
+          where: { collection: currentD2Collection },
+          order: [
+            ["map_id", "DESC"],
+          ]
+        });
+      }
       if (collectionName.length > 0) {
         aimList = await aimLists.findAll({
-          where: { collection: collectionName },
+          where: { 
+            collection: { 
+              [Op.like]: collectionName.toLowerCase()
+            } 
+          },
           order: [
             ["map_id", "DESC"],
           ]
@@ -192,12 +208,12 @@ module.exports = {
             .then(async (m) => {
               ind = Number(m.fields.getTextInputValue("page num" + epoch)) - 1
               if (ind > -1 && ind <= maxIndex) {
+                backward.setDisabled(false);
+                forward.setDisabled(false);
                 if(ind == 0) {
                   backward.setDisabled(true);
-                  forward.setDisabled(false);
                 }
                 if(ind == maxIndex) {
-                  backward.setDisabled(false);
                   forward.setDisabled(true);
                 }
                 await m.update({

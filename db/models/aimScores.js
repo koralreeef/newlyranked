@@ -21,6 +21,9 @@ module.exports = (sequelize, DataTypes) => {
 		score: {
             type: DataTypes.INTEGER,
         },
+		pp:{ 
+			type: DataTypes.INTEGER,
+		},
 		accuracy: {
             type: DataTypes.INTEGER,
         },

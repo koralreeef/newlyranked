@@ -11,7 +11,7 @@ async function buildEmbed() {
   const collectionName = collection[0].collection
   let userString = "";
   let special = "";
-  ending = collectionName + " ends <t:1747094580:R>"
+  ending = "season 0 ends <t:1747094580:R>"
   for (id in userIDs) {
     let total = 0;
     let totalMaps = 0;

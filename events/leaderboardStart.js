@@ -1,25 +1,29 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
-const { leaderboardChannel } = require('../config.json');
+const { leaderboardChannel, leaderboardMessage, currentD1Collection, currentD2Collection } = require('../config.json');
 const { lightskyblue } = require("color-name");
 let ending = "";
 
 async function buildEmbed(toggle) {
     const userIDs = await osuUsers.findAll()
-    const collection = await aimLists.findAll({ where: { is_current: 1 } })
+    let divName = currentD1Collection;
+    console.log(toggle)
+    const board = toggle.pp;
+    if(toggle.div) divName = currentD2Collection;
+    const collection = await aimLists.findAll({ where: { collection: divName } })
     const validUsers = []
-    const collectionName = collection[0].collection
+    const collectionName = divName
     let userString = "";
     let special = "";
-    ending = collectionName + " ends <t:1747094580:R>"
+    ending = "season 0 ends <t:1747094580:R>"
     for (id in userIDs) {
         let total = 0;
         let totalMaps = 0;
         let nmMaps = 0;
         let hrMaps = 0;
-        const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id } })
+        const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, collection: divName } })
         if (found) {
-            const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, is_current: 1 } })
+            const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, collection: divName } })
             const mapIDs = []
             const unique = []
             //???
@@ -32,26 +36,26 @@ async function buildEmbed(toggle) {
             //console.log(mapIDs)
             let processing = true
             while (processing) {
-                const scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, is_current: 1, mods: "+NM" } })
-                const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, is_current: 1, mods: "+HR" } })
+                const scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM" } })
+                const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR" } })
                 if (scoreNM && scoreHR) {
                     totalMaps++;
                     if (scoreNM.misscount > scoreHR.misscount) {
-                        if (toggle) {
+                        if (board) {
                             total = total + scoreHR.score
                         } else {
                             total = total + scoreHR.misscount
                         }
                         hrMaps++;
                     } else if (scoreNM.misscount < scoreHR.misscount) {
-                        if (toggle) {
+                        if (board) {
                             total = total + scoreNM.score
                         } else {
                             total = total + scoreNM.misscount
                         }
                         nmMaps++;
                     } else if (scoreNM.misscount == scoreHR.misscount) {
-                        if (toggle) {
+                        if (board) {
                             total = total + scoreNM.score
                         } else {
                             total = total + scoreNM.misscount
@@ -61,7 +65,7 @@ async function buildEmbed(toggle) {
                 } else {
                     if (scoreNM) {
                         totalMaps++;
-                        if (toggle) {
+                        if (board) {
                             total = total + scoreNM.score
                         } else {
                             total = total + scoreNM.misscount
@@ -69,7 +73,7 @@ async function buildEmbed(toggle) {
                         nmMaps++;
                     } else if (scoreHR) {
                         totalMaps++;
-                        if (toggle) {
+                        if (board) {
                             total = total + scoreHR.score
                         } else {
                             total = total + scoreHR.misscount
@@ -99,7 +103,7 @@ async function buildEmbed(toggle) {
             //console.log("maps played: "+mapsPlayed+"; "+scoresNM.length+"/"+scoresHR.length+" NM/HR plays")
         }
     }
-    if (!toggle) {
+    if (!board) {
         validUsers.sort(function (user1, user2) {
             if (user1.mapcount < user2.mapcount) return 1;
             if (user1.mapcount > user2.mapcount) return -1;
@@ -118,7 +122,7 @@ async function buildEmbed(toggle) {
     let measure = "misscount";
     let emoji = "<:miss:1324410432450068555>";
     let mode = "misscount";
-    if(toggle){
+    if(board){
         measure = "score";
         emoji = "";
         mode = "score";
@@ -134,6 +138,14 @@ async function buildEmbed(toggle) {
     }
     const d = new Date();
 
+    if(validUsers.length < 1){
+        const scoreEmbed = new EmbedBuilder()
+        .setAuthor({ name: "Leaderboard for: " + collectionName + "\nno misscount leader yet!", iconURL: "https://a.ppy.sh"  })
+        .setDescription("no plays yet this season :(")
+        .setColor(lightskyblue)
+        .setFooter({ text: "season theme: sped up songs\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: "+mode});
+    return scoreEmbed;
+    }
     const scoreEmbed = new EmbedBuilder()
         .setAuthor({ name: "Leaderboard for: " + collectionName + "\nCurrent "+measure+" leader: " + validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
         .setDescription(userString)
@@ -144,19 +156,23 @@ async function buildEmbed(toggle) {
 
 async function sortByMod(mod, toggle) {
     const userIDs = await osuUsers.findAll()
-    const collection = await aimLists.findAll({ where: { is_current: 1 } })
+    let divName = currentD1Collection;
+    console.log(toggle)
+    const board = toggle.pp;
+    if(toggle.div) divName = currentD2Collection;
+    const collection = await aimLists.findAll({ where: { collection: divName } })
     const validUsers = []
-    const collectionName = collection[0].collection
+    const collectionName = divName
     let userString = "";
     let special = "";
-    ending = collectionName + " ends <t:1747094580:R>"
+    ending = "season 0 ends <t:1747094580:R>"
     for (id in userIDs) {
         let total = 0;
-        const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, is_current: 1, mods: mod } })
+        const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, collection: divName, mods: mod } })
         if (found) {
-            const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, is_current: 1, mods: mod } })
+            const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, collection: divName, mods: mod } })
             for (score in scores) {
-                if (toggle) {
+                if (board) {
                     total = total + scores[score].score
                 } else {
                     total = total + scores[score].misscount
@@ -174,7 +190,7 @@ async function sortByMod(mod, toggle) {
             //console.log("maps played: "+mapsPlayed+"; "+scoresNM.length+"/"+scoresHR.length+" NM/HR plays")
         }
     }
-    if (!toggle) {
+    if (!board) {
         validUsers.sort(function (user1, user2) {
             if (user1.mapcount < user2.mapcount) return 1;
             if (user1.mapcount > user2.mapcount) return -1;
@@ -193,7 +209,7 @@ async function sortByMod(mod, toggle) {
     let measure = "misscount";
     let emoji = "<:miss:1324410432450068555>";
     let mode = "misscount";
-    if(toggle){
+    if(board){
         measure = "score";
         emoji = "";
         mode = "score";
@@ -210,6 +226,14 @@ async function sortByMod(mod, toggle) {
         userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + " ** "+emoji+" "+totalString + "\n")
     }
     const d = new Date();
+    if(validUsers.length < 1){
+        const scoreEmbed = new EmbedBuilder()
+        .setAuthor({ name: "Leaderboard for: " + collectionName + "\nno misscount leader yet!", iconURL: "https://a.ppy.sh"  })
+        .setDescription("no plays yet this season :(")
+        .setColor(lightskyblue)
+        .setFooter({ text: "season theme: sped up songs\nlast updated " + d.toUTCString() + "\ncurrent mod: "+mod+"\ncurrent leaderboard: "+mode});
+    return scoreEmbed;
+    }
     const scoreEmbed = new EmbedBuilder()
         .setAuthor({ name: mod.substring(1) + " Leaderboard for: " + collectionName + "\nCurrent "+measure+" leader: " + validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
         .setDescription(userString)
@@ -243,62 +267,85 @@ module.exports = {
             .setStyle(ButtonStyle.Primary);
 
         const divToggle = new ButtonBuilder()
-        .setCustomId("divToggle" + epoch)
-        .setDisabled(true)
-        .setLabel("to div 2 boards")
-        .setStyle(ButtonStyle.Primary);
+            .setCustomId("divToggle" + epoch)
+            .setLabel("to div 2 boards")
+            .setStyle(ButtonStyle.Primary);
 
-        const row = new ActionRowBuilder().addComponents(hr, nm, reset, toggle, divToggle);
-
+        const row = new ActionRowBuilder().addComponents(hr, nm, reset);
+        const row2 = new ActionRowBuilder().addComponents(toggle, divToggle);
+        let ppToggle = {
+            pp: false,
+            div: false,
+        }
         const channel = client.channels.cache.get(leaderboardChannel);
-        const embed = await channel.messages.fetch("1364247309973458996");
-        const collection = await buildEmbed();
-        await embed.edit({ content: ending, embeds: [collection], components: [row] });
+        const embed = await channel.messages.fetch(leaderboardMessage);
+        const collection = await buildEmbed(ppToggle);
+        await embed.edit({ content: ending, embeds: [collection], components: [row, row2] });
 
         //permanent buttons
         const collector = embed.createMessageComponentCollector();
 
-        let ppToggle = false;
+
         let currentMod = "none";
         collector.on("collect", async (m) => {
             if (m.customId == "hr" + epoch) {
                 currentMod = "+HR";
                 await m.update({
                     embeds: [await sortByMod(currentMod, ppToggle)],
-                    components: [row],
+                    components: [row, row2],
                 })
             }
             if (m.customId == "nm" + epoch) {
                 currentMod = "+NM";
                 await m.update({
                     embeds: [await sortByMod(currentMod, ppToggle)],
-                    components: [row],
+                    components: [row, row2],
                 })
             }
             if (m.customId == "reset" + epoch) {
                 currentMod = "none";
                 await m.update({
                     embeds: [await buildEmbed(ppToggle)],
-                    components: [row],
+                    components: [row, row2],
                 })
             }
             if (m.customId == "toggle" + epoch) {
-                if (!ppToggle) {
-                    ppToggle = true;
+                if (!ppToggle.pp) {
+                    ppToggle.pp = true;
                     toggle.setLabel("misscount boards")
-                } else {
-                    ppToggle = false;
+                } else if(ppToggle.pp) {
+                    ppToggle.pp = false;
                     toggle.setLabel("score boards")
                 }
                 if (currentMod != "none") {
                     await m.update({
                         embeds: [await sortByMod(currentMod, ppToggle)],
-                        components: [row],
+                        components: [row, row2],
                     })
                 } else {
                     await m.update({
                         embeds: [await buildEmbed(ppToggle)],
-                        components: [row],
+                        components: [row, row2],
+                    })
+                }
+            }
+            if (m.customId == "divToggle" + epoch) {
+                if (!ppToggle.div) {
+                    ppToggle.div = true;
+                    divToggle.setLabel("to div1 boards")
+                } else if (ppToggle.div) {
+                    ppToggle.div = false;
+                    divToggle.setLabel("to div2 boards")
+                }
+                if (currentMod != "none") {
+                    await m.update({
+                        embeds: [await sortByMod(currentMod, ppToggle)],
+                        components: [row, row2],
+                    })
+                } else {
+                    await m.update({
+                        embeds: [await buildEmbed(ppToggle)],
+                        components: [row, row2],
                     })
                 }
             }

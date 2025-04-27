@@ -82,7 +82,7 @@
     "queue-microtask": "^1.2.3",
     "resolve-from": "^4.0.0",
     "reusify": "^1.0.4",
-    "rosu-pp-js": "^2.0.0",
+    "rosu-pp-js": "^3.0.0",
     "run-parallel": "^1.2.0",
     "sequelize": "^6.37.3",
     "shebang-command": "^2.0.0",
