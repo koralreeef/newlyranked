@@ -71,7 +71,7 @@ module.exports = {
                             message.channel.send(mapset[mapID]+" has already been added by " + map.adder + "!");
                         } else {
                             const newMap = await aimLists.create({
-                                map_id: mapset[mapID],
+                                map_id: mapset[mapID].trim(),
                                 set_id: beatmap.beatmapset_id,
                                 collection: collectionName,
                                 adder: self.username,

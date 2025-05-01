@@ -381,16 +381,16 @@ async function inputScore(blob, score, acc, modArray, message) {
     const validMap = await aimLists.findOne({
         where: { map_id: score.beatmap.id }
     })
-    let collectionName = currentD1Collection;
-    if(validMap.collection == currentD2Collection){
-        collectionName = currentD2Collection
-    }
-    const currentCollection = await aimLists.count({
-        where: { collection: collectionName },
-    });
     console.log("check check"+validMap)
     //check for time later
     if (validMap && score.passed) {
+        let collectionName = currentD1Collection;
+        if(validMap.collection == currentD2Collection){
+            collectionName = currentD2Collection
+        }
+        const currentCollection = await aimLists.count({
+            where: { collection: collectionName },
+        });
         if (aimScore) {
             console.log("existing score found")
             if (score.statistics.count_miss < aimScore.misscount) {
