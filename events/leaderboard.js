@@ -88,15 +88,16 @@ async function buildEmbed(toggle) {
     if (user1.misscount > user2.misscount) return 1;
     if (user1.misscount < user2.misscount) return -1;
   });
-  //console.log(validUsers)
-  for (user in validUsers) {
-    const current = validUsers[user];
-    let totalString = "";
-    if(current.mapcount != collection.length){
-      totalString = "**"+current.mapcount + "**/" + collection.length + " scores"
-    }
-    const pageNum = Number(user) + 1;
-    userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount + " ** <:miss:1324410432450068555> "+totalString+" **" +current.speciality+"**\n")
+  for (let i = 0; i < 25; i++) {
+      if(i < validUsers.length){
+          const current = validUsers[i];
+          let totalString = "";
+          if (current.mapcount != collection.length) {
+              totalString = "** • ** **" + current.mapcount + "**/" + collection.length + " scores"
+          }
+          const pageNum = Number(i) + 1;
+          userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount + " ** <:miss:1324410432450068555> "+totalString+" **" +current.speciality+"**\n")
+      }
   }
   const d = new Date();
 

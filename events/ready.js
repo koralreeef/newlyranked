@@ -2,12 +2,32 @@ const { Events } = require('discord.js');
 const { PresenceUpdateStatus } = require('discord.js');
 const { ActivityType } = require('discord.js');
 const { client_cred } = require('../helper.js');
+const { CronJob } = require ('cron');
+const fs = require("fs");
 
 setInterval(async () => {
 	await client_cred();
 	console.log("hourly token refreshed!")
 	}, 3600001);
 	
+function getCurrentFilenames() {
+	console.log("\nCurrent filenames:");
+	fs.readdirSync(__dirname).forEach(file => {
+		console.log(file);
+	});
+}
+
+function copyDB () {
+	const epoch = Date.now();
+	fs.copyFile("database.sqlite", "./db/backups/"+epoch+".sqlite", (err) => {
+		if (err) {
+			console.log("Error Found:", err);
+		}
+		else {  
+
+		}
+	});
+}
 module.exports = {
 	name: Events.ClientReady,
 	once: true,
@@ -17,5 +37,11 @@ module.exports = {
 		client.user.setStatus(PresenceUpdateStatus.DoNotDisturb);
 		await client_cred();
 		console.log("new token set!");
+		const scheduleExpression = '0 */24 * * *'; // Run once every eight hours in prod
+		//const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
+
+		const job = new CronJob(scheduleExpression, copyDB); // change to scheduleExpressionMinute for testing
+
+		job.start();
 	},
 };

@@ -185,6 +185,7 @@ module.exports = {
                 console.log(err);
             });
         }
+        await sleep(1000)
         fs.rmdir("./maps" + epoch + "/", function (err) {
             console.log(err);
         });

@@ -5,7 +5,7 @@ const { setDivToggle, setPPToggle } = require('../helper.js');
 const { lightskyblue } = require("color-name");
 let ending = "";
 
-async function buildEmbed(toggle) {
+async function buildEmbed(ind, toggle, backward, forward) {
     const userIDs = await osuUsers.findAll()
     let divName = currentD1Collection;
     console.log(toggle)
@@ -128,15 +128,34 @@ async function buildEmbed(toggle) {
         emoji = "";
         mode = "score";
     } 
-    for (user in validUsers) {
-        const current = validUsers[user];
-        let totalString = "";
-        if (current.mapcount != collection.length) {
-            totalString = "** • ** **" + current.mapcount + "**/" + collection.length + " scores"
-        }
-        const pageNum = Number(user) + 1;
-        userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + " ** "+emoji+" " + totalString + " **" + current.speciality + "**\n")
+    //genuinely dont know how to solve this we might need a rewrite
+    let offset = Math.trunc(validUsers.length/25)
+    let index = Number(ind);
+    if(index > 0) index = index * 25;
+    if(offset == ind){ 
+        forward.setDisabled(true);
+        backward.setDisabled(false);
     }
+    if(index == 0){
+        backward.setDisabled(true);
+        forward.setDisabled(false);
+    } 
+    if(index == 0 && offset == 0){
+        backward.setDisabled(true);
+        forward.setDisabled(true);
+    } 
+    for (let i = index; i < 25 + index; i++) {
+        if(i < validUsers.length){
+            const current = validUsers[i];
+            let totalString = "";
+            if (current.mapcount != collection.length) {
+                totalString = "** • ** **" + current.mapcount + "**/" + collection.length + " scores"
+            }
+            const pageNum = Number(i) + 1;
+            userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + " ** "+emoji+" " + totalString + " **" + current.speciality + "**\n")
+        }
+    }
+    console.log(userString)
     const d = new Date();
 
     if(validUsers.length < 1){
@@ -155,7 +174,7 @@ async function buildEmbed(toggle) {
     return scoreEmbed;
 }
 
-async function sortByMod(mod, toggle) {
+async function sortByMod(mod, toggle, ind, backward, forward) {
     const userIDs = await osuUsers.findAll()
     let divName = currentD1Collection;
     console.log(toggle)
@@ -215,16 +234,32 @@ async function sortByMod(mod, toggle) {
         emoji = "";
         mode = "score";
     } 
-    
-    //console.log(validUsers)
-    for (user in validUsers) {
-        const current = validUsers[user];
-        let totalString = "";
-        if (current.mapcount != collection.length) {
-            totalString = " • **" + current.mapcount + "**/" + collection.length + " **" + mod.substring(1) + "**"
+    let offset = Math.trunc(validUsers.length/25)
+    let index = Number(ind);
+    if(index > 0) index = index * 25;
+    if(offset == ind){ 
+        forward.setDisabled(true);
+        backward.setDisabled(false);
+    }
+    if(index == 0){
+        backward.setDisabled(true);
+        forward.setDisabled(false);
+    } 
+    if(index == 0 && offset == 0){
+        backward.setDisabled(true);
+        forward.setDisabled(true);
+    } 
+    console.log(validUsers)
+    for (let i = index; i < 25 + index; i++) {
+        if(i < validUsers.length){
+            const current = validUsers[i];
+            let totalString = "";
+            if (current.mapcount != collection.length) {
+                            totalString = " • **" + current.mapcount + "**/" + collection.length + " **" + mod.substring(1) + "**"
+            }
+            const pageNum = Number(i) + 1;
+            userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + " ** "+emoji+" " + totalString + "\n")
         }
-        const pageNum = Number(user) + 1;
-        userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + " ** "+emoji+" "+totalString + "\n")
     }
     const d = new Date();
     if(validUsers.length < 1){
@@ -272,45 +307,90 @@ module.exports = {
             .setLabel("to div 2 boards")
             .setStyle(ButtonStyle.Primary);
 
+        const forward = new ButtonBuilder()
+            .setCustomId("forward" + epoch)
+            //.setDisabled(true)
+            .setLabel("⟶")
+            .setStyle(ButtonStyle.Primary);
+
+        const backward = new ButtonBuilder()
+            .setCustomId("back" + epoch)
+            //.setDisabled(true)
+            .setLabel("⟵")
+            .setStyle(ButtonStyle.Primary);
+
         const row = new ActionRowBuilder().addComponents(hr, nm, reset);
         const row2 = new ActionRowBuilder().addComponents(toggle, divToggle);
+        const row3 = new ActionRowBuilder().addComponents(backward, forward);
         let ppToggle = {
             pp: false,
             div: false,
         }
+        let ind = 0;
         const channel = client.channels.cache.get(leaderboardChannel);
         const embed = await channel.messages.fetch(leaderboardMessage);
-        const collection = await buildEmbed(ppToggle);
-        await embed.edit({ content: ending, embeds: [collection], components: [row, row2] });
+        const collection = await buildEmbed(ind, ppToggle, backward, forward);
+        await embed.edit({ content: ending, embeds: [collection], components: [row3, row, row2] });
 
         //permanent buttons
         const collector = embed.createMessageComponentCollector();
 
-
         let currentMod = "none";
         collector.on("collect", async (m) => {
+            if (m.customId == "forward" + epoch) {
+                ind++;
+                if(currentMod == "none"){
+                    await m.update({
+                        embeds: [await buildEmbed(ind, ppToggle, backward, forward)],
+                        components: [row3, row, row2],
+                    })
+                } else {
+                    await m.update({
+                        embeds: [await sortByMod(currentMod, ppToggle, ind, backward, forward)],
+                        components: [row3, row, row2],
+                    })
+                }
+            }
+            if (m.customId == "back" + epoch) {
+                ind--;
+                if(currentMod == "none"){
+                    await m.update({
+                        embeds: [await buildEmbed(ind, ppToggle, backward, forward)],
+                        components: [row3, row, row2],
+                    })
+                } else {
+                    await m.update({
+                        embeds: [await sortByMod(currentMod, ppToggle, ind, backward, forward)],
+                        components: [row3, row, row2],
+                    })
+                }
+            }
             if (m.customId == "hr" + epoch) {
+                ind = 0;
                 currentMod = "+HR";
                 await m.update({
-                    embeds: [await sortByMod(currentMod, ppToggle)],
-                    components: [row, row2],
+                    embeds: [await sortByMod(currentMod, ppToggle, ind, backward, forward)],
+                    components: [row3, row, row2],
                 })
             }
             if (m.customId == "nm" + epoch) {
+                ind = 0;
                 currentMod = "+NM";
                 await m.update({
-                    embeds: [await sortByMod(currentMod, ppToggle)],
-                    components: [row, row2],
+                    embeds: [await sortByMod(currentMod, ppToggle, ind, backward, forward)],
+                    components: [row3, row, row2],
                 })
             }
             if (m.customId == "reset" + epoch) {
+                ind = 0;
                 currentMod = "none";
                 await m.update({
-                    embeds: [await buildEmbed(ppToggle)],
-                    components: [row, row2],
+                    embeds: [await buildEmbed(ind, ppToggle, backward, forward)],
+                    components: [row3, row, row2],
                 })
             }
             if (m.customId == "toggle" + epoch) {
+                ind = 0;
                 if (!ppToggle.pp) {
                     ppToggle.pp = true;
                     setPPToggle(true);
@@ -322,17 +402,18 @@ module.exports = {
                 }
                 if (currentMod != "none") {
                     await m.update({
-                        embeds: [await sortByMod(currentMod, ppToggle)],
-                        components: [row, row2],
+                        embeds: [await sortByMod(currentMod, ppToggle, ind, backward, forward)],
+                        components: [row3, row, row2],
                     })
                 } else {
                     await m.update({
-                        embeds: [await buildEmbed(ppToggle)],
-                        components: [row, row2],
+                        embeds: [await buildEmbed(ind, ppToggle, backward, forward)],
+                        components: [row3, row, row2],
                     })
                 }
             }
             if (m.customId == "divToggle" + epoch) {
+                ind = 0;
                 if (!ppToggle.div) {
                     ppToggle.div = true;
                     setDivToggle(true);
@@ -344,13 +425,13 @@ module.exports = {
                 }
                 if (currentMod != "none") {
                     await m.update({
-                        embeds: [await sortByMod(currentMod, ppToggle)],
-                        components: [row, row2],
+                        embeds: [await sortByMod(currentMod, ppToggle, ind, backward, forward)],
+                        components: [row3, row, row2],
                     })
                 } else {
                     await m.update({
-                        embeds: [await buildEmbed(ppToggle)],
-                        components: [row, row2],
+                        embeds: [await buildEmbed(ind, ppToggle, backward, forward)],
+                        components: [row3, row, row2],
                     })
                 }
             }
