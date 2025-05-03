@@ -10,7 +10,7 @@ const regex = /^\.misscount/gm;
 module.exports = {
     name: Events.MessageCreate,
     async execute(message) {
-        let msg = message.content;
+        let msg = "";
         /*
         console.log(message.type);
         if(message.type == 19){

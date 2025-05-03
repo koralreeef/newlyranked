@@ -414,6 +414,7 @@ async function inputScore(blob, score, acc, modArray, message) {
                 let checking = true;
                 let i = 0;
                 let rank = 0;
+                //CHANGE THIS
                 while(checking){
                     const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id}, order: [["misscount", "ASC"]]})
                     if(found.user_id == scores[i].user_id){

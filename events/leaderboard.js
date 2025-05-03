@@ -35,8 +35,8 @@ async function buildEmbed(toggle) {
       }
       let processing = true
       while(processing) {
-        const scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM" } })
-        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR" } })
+        const scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM" }, order: [["misscount", "DESC"]] })
+        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR" }, order: [["misscount", "DESC"]] })
         if (scoreNM && scoreHR) {
           totalMaps++;
           if (scoreNM.misscount > scoreHR.misscount) {
