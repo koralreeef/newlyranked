@@ -42,7 +42,7 @@ async function calcLazerPP(score, map, total, modString) {
     let adjustSettings = [];
     let clockSettings = [];
     let dt = false;
-    console.log(details);
+    //console.log(details);
     for (const mod of details.mods) {
         if (mod.acronym === "DA") {
             adjustSettings = mod.settings;
@@ -52,14 +52,16 @@ async function calcLazerPP(score, map, total, modString) {
             dt = true;
             clockSettings = mod.settings;
         }
+        if (mod.acronym === "CL") {
+            console.log(mod.settings)
+            lazerMods = modString + "CL";
+        }
     }
     if (dt) {
         if (clockSettings.speed_change != 1.5)
             lazerMods = lazerMods + " (" + clockSettings.speed_change + "x)";
     }
     //console.log(details);
-    console.log(clockSettings);
-    console.log(adjustSettings);
     const cs = adjustSettings.circle_size ?? map.cs;
     const clockRate = clockSettings.speed_change ?? 1;
     const lazer_hits = {
@@ -139,7 +141,8 @@ async function calcLazerPP(score, map, total, modString) {
         const fcPP = (FCAttrs.pp).toFixed(2);
         return {
             stats: maxAttrs, currPP: currentPP, fcPP: fcPP, maxPP: maxPP,
-            accuracy: lazer_accuracy.accuracy, clockRate: clockRate, cs: cs, adjust: adjustSettings ?? null, lazerMods
+            accuracy: lazer_accuracy.accuracy, clockRate: clockRate, cs: cs, adjust: adjustSettings ?? null, lazerMods,
+            details: details
         }
     }
 }
@@ -355,7 +358,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         });
     return rsEmbed;
 }
-async function inputScore(blob, score, acc, modArray, message) {
+async function inputScore(blob, score, acc, modArray, message, lazer, details) {
     //const epoch = Date.now();
     //store two versions of best score
     //ugh thats so annoying man
@@ -374,6 +377,23 @@ async function inputScore(blob, score, acc, modArray, message) {
     } else {
         mods = mods + "NM";
     }
+    if(lazer) {
+        const banned = ["DA", "DC", "HT", "DT"]
+        if(details){
+            for (const mod of details.mods) {
+                if (banned.includes(mod.acronym)) return
+                if (mod.acronym === "CL") {
+                    console.log(mod.settings)
+                    for(key in mod.settings){
+                        console.log("hey man")
+                        console.log(key)
+                        if(key === "classic_note_lock") return
+                    }
+                }
+            }
+        }
+        console.log("im through!!")
+    }
 
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, user_id: score.user_id, mods: mods },
@@ -383,6 +403,7 @@ async function inputScore(blob, score, acc, modArray, message) {
     })
     console.log("check check"+validMap)
     //check for time later
+    //add patch from test2.js for storing multiple scores
     if (validMap && score.passed) {
         let collectionName = currentD1Collection;
         if(validMap.collection == currentD2Collection){
@@ -416,8 +437,8 @@ async function inputScore(blob, score, acc, modArray, message) {
                 let rank = 0;
                 //CHANGE THIS
                 while(checking){
-                    const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id}, order: [["misscount", "ASC"]]})
-                    if(found.user_id == scores[i].user_id){
+                    const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id, date: score.created_at}, order: [["misscount", "ASC"]]})
+                    if(found.misscount <= scores[i].misscount){
                         rank = Number(i) + 1;
                         checking = false;
                     }
@@ -493,8 +514,9 @@ async function inputScore(blob, score, acc, modArray, message) {
             let i = 0;
             let rank = 0;
             while(checking){
-                const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id}, order: [["misscount", "ASC"]]})
-                if(found.user_id == scores[i].user_id){
+                const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id, date: score.created_at}, order: [["misscount", "ASC"]]})
+                //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
+                if(found.misscount <= scores[i].misscount){
                     rank = Number(i) + 1;
                     checking = false;
                 }
@@ -643,6 +665,7 @@ module.exports = {
                     const best = await v2.scores.list({
                         type: 'user_best',
                         limit: 100,
+                        mode: "osu",
                         beatmap_id: score.beatmap.id,
                         user_id: user.id,
                     });
@@ -733,7 +756,7 @@ module.exports = {
                     let progress = "@" + Math.round(percentage) + "%";
                     if (percentage == 100) progress = "";
                     //console.log(score);
-                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message)
+                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message, lazer, ppData.details)
                     const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                     message.channel.send({ content: leaderboardString, embeds: [rsEmbed] });
                 } catch (err) {
