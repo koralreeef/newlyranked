@@ -26,11 +26,13 @@ module.exports = {
   async execute(message) {
     const msg = message.content;
     if (regex.test(msg)) {
-    const list = await aimLists.findAll()
+    const list = await aimLists.findAll({ order: [["collection", "asc"]]})
     let collectionArray = []
     for(collectionName in list){
-      if(!collectionArray.includes(list[collectionName].collection)){
-        collectionArray.push(list[collectionName].collection);
+      const current = list[collectionName]
+      const check = await aimLists.count({where: {collection: current.collection}})
+      if(!collectionArray.includes(current.collection+" (**"+check+"**)")){
+        collectionArray.push(current.collection+" (**"+check+"**)");
       }
     }
     const collection = await buildEmbed(collectionArray); 

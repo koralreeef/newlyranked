@@ -14,6 +14,43 @@ const regex = /^\.rs \D{1,}/gm;
 const regex2 = /^\.rs[0-9]+/gm
 const regex3 = /^\.rs[0-9]+ /gm;
 
+async function createLeaderboard(api, id, user) {
+    let added = false;
+    const validMap = await aimLists.findOne({ where: { map_id: id } })
+    const unique = []
+    const unfiltered = await aimLists.findAll({ attributes: ["creator"] })
+    for (entry in unfiltered) {
+        if (!unique.includes(unfiltered[entry].creator)) unique.push(unfiltered[entry].creator)
+    }
+    if (!validMap) {
+        let beatmap;
+        try {
+            beatmap = await api.beatmaps.getBeatmap(id);
+        } catch (err) {
+            console.log(err)
+        }
+        if (unique.includes(beatmap.beatmapset.creator)) {
+            await aimLists.create({
+                map_id: id,
+                set_id: beatmap.beatmapset_id,
+                collection: beatmap.beatmapset.creator,
+                adder: user,
+                difficulty: beatmap.version,
+                title: beatmap.beatmapset.title,
+                artist: beatmap.beatmapset.artist,
+                creator: beatmap.beatmapset.creator,
+                creatorID: beatmap.beatmapset.user_id,
+                is_current: 0
+            })
+            console.log("added " + beatmap.beatmapset.title)
+            added = true
+        }
+    } else {
+        console.log(validMap.title + " already exists")
+    }
+    return added;
+}
+
 function getLength(s) {
     minutes = Math.trunc(s / 60);
     seconds = Math.trunc(s - minutes * 60);
@@ -238,7 +275,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     if (topPlayIndex == 1) {
         embedColor = white;
     }
-    if (modString.includes("HR")){
+    if (modString.includes("HR")) {
         leaderboardMods = "+HR"
     } else {
         leaderboardMods = "+NM"
@@ -284,15 +321,15 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     let collectionString = "";
     let timestamp = Math.floor(date / 1000); //remove last subtraction after dst
 
-    const aimMap = await aimLists.findOne({where: {map_id: beatmap.id}})
+    const aimMap = await aimLists.findOne({ where: { map_id: beatmap.id } })
 
-    if(aimMap){
-        const maps = await aimLists.findAll({where: {collection: aimMap.collection}, order: [["map_id", "DESC"]]})
+    if (aimMap) {
+        const maps = await aimLists.findAll({ where: { collection: aimMap.collection }, order: [["map_id", "DESC"]] })
         let checking = true;
         let i = 0;
-        while(checking){
-            const found = await aimLists.findOne({where: {map_id: beatmap.id}})
-            if(found.map_id === maps[i].map_id){
+        while (checking) {
+            const found = await aimLists.findOne({ where: { map_id: beatmap.id } })
+            if (found.map_id === maps[i].map_id) {
                 collectionIndex = Number(i) + 1;
                 checking = false;
             }
@@ -300,33 +337,33 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         }
         collectionName = aimMap.collection
         collectionLength = maps.length
-        if(beatmap.status == "graveyard" || beatmap.status == "wip" || beatmap.status == "pending"){
-            if(progress == ""){
+        if (beatmap.status == "graveyard" || beatmap.status == "wip" || beatmap.status == "pending") {
+            if (progress == "") {
                 checking = true;
                 i = 0;
                 let rank = 0;
-                const scores = await aimScores.findAll({where: {map_id: beatmap.id, mods: leaderboardMods}, order: [["misscount", "ASC"]]})
-                while(checking){
-                    const found = await aimScores.findOne({where: {map_id: beatmap.id, mods: leaderboardMods, user_id: user.id}})
-                    if(found.user_id == scores[i].user_id){
+                const scores = await aimScores.findAll({ where: { map_id: beatmap.id, mods: leaderboardMods }, order: [["misscount", "ASC"]] })
+                while (checking) {
+                    const found = await aimScores.findOne({ where: { map_id: beatmap.id, mods: leaderboardMods, user_id: user.id } })
+                    if (found.user_id == scores[i].user_id) {
                         rank = Number(i) + 1;
                         checking = false;
                     }
-                    if(i == scores.length - 1){
+                    if (i == scores.length - 1) {
                         rank = Number(i) + 1;
                         checking = false;
                     }
                     i++;
                 }
                 modleaderboardIndex = " **(#" + rank + ")**";
-            }   
+            }
         }
     }
 
-    if(collectionLength > 0){
-        collectionString = " map "+collectionIndex+"/"+collectionLength+" from "+collectionName
+    if (collectionLength > 0) {
+        collectionString = " map " + collectionIndex + "/" + collectionLength + " from " + collectionName
     }
-    
+
     if (blob.fcPP < blob.currPP)
         fcPPString = "";
     let rsEmbed = new EmbedBuilder()
@@ -353,12 +390,12 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         )
         .setColor(embedColor)
         .setFooter({
-            text: collectionString + "\n"+ beatmap.status + " mapset by " + beatmapset.creator,
+            text: collectionString + "\n" + beatmap.status + " mapset by " + beatmapset.creator,
             iconURL: "https://a.ppy.sh/" + beatmapset.user_id
         });
     return rsEmbed;
 }
-async function inputScore(blob, score, acc, modArray, message, lazer, details) {
+async function inputScore(blob, score, acc, modArray, message, lazer, details, api) {
     //const epoch = Date.now();
     //store two versions of best score
     //ugh thats so annoying man
@@ -377,17 +414,17 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details) {
     } else {
         mods = mods + "NM";
     }
-    if(lazer) {
+    if (lazer) {
         const banned = ["DA", "DC", "HT", "DT"]
-        if(details){
+        if (details) {
             for (const mod of details.mods) {
                 if (banned.includes(mod.acronym)) return
                 if (mod.acronym === "CL") {
                     console.log(mod.settings)
-                    for(key in mod.settings){
+                    for (key in mod.settings) {
                         console.log("hey man")
                         console.log(key)
-                        if(key === "classic_note_lock") return
+                        if (key === "classic_note_lock") return
                     }
                 }
             }
@@ -395,18 +432,19 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details) {
         console.log("im through!!")
     }
 
+    const added = await createLeaderboard(api, score.beatmap.id, score.user.username)
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, user_id: score.user_id, mods: mods },
     });
     const validMap = await aimLists.findOne({
         where: { map_id: score.beatmap.id }
     })
-    console.log("check check"+validMap)
+    console.log("check check" + validMap)
     //check for time later
     //add patch from test2.js for storing multiple scores
     if (validMap && score.passed) {
         let collectionName = currentD1Collection;
-        if(validMap.collection == currentD2Collection){
+        if (validMap.collection == currentD2Collection) {
             collectionName = currentD2Collection
         }
         const currentCollection = await aimLists.count({
@@ -429,39 +467,39 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details) {
                 const scores = await aimScores.findAll({
                     where: { map_id: score.beatmap.id },
                     order: [
-                      ["misscount", "ASC"],
+                        ["misscount", "ASC"],
                     ]
-                  })
+                })
                 let checking = true;
                 let i = 0;
                 let rank = 0;
                 //CHANGE THIS
-                while(checking){
-                    const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id, date: score.created_at}, order: [["misscount", "ASC"]]})
-                    if(found.misscount <= scores[i].misscount){
+                while (checking) {
+                    const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, user_id: score.user_id, date: score.created_at }, order: [["misscount", "ASC"]] })
+                    if (found.misscount <= scores[i].misscount) {
                         rank = Number(i) + 1;
                         checking = false;
                     }
-                    if(i == scores.length - 1){
+                    if (i == scores.length - 1) {
                         rank = Number(i) + 1;
                         checking = false;
                     }
                     i++;
                 }
-                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + oldMisscount + " -> " + score.statistics.count_miss + 
-                ")\nnew leaderboard rank: **#"+rank+"**/"+scores.length
+                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + oldMisscount + " -> " + score.statistics.count_miss +
+                    ")\nnew leaderboard rank: **#" + rank + "**/" + scores.length
                 return string
             }
             return ""
         } else {
             let is_current = 0;
-            if(validMap.is_current == 1){
+            if (validMap.is_current == 1) {
                 is_current = 1;
             }
             console.log("creating new score")
             const preEntry = await aimScores.count({
-                where: {user_id: score.user_id, collection: collectionName, mods: mods}
-              })
+                where: { user_id: score.user_id, collection: collectionName, mods: mods }
+            })
             await aimScores.create({
                 map_id: score.beatmap.id,
                 collection: validMap.collection,
@@ -482,51 +520,55 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details) {
             const scores = await aimScores.findAll({
                 where: { map_id: score.beatmap.id },
                 order: [
-                  ["misscount", "ASC"],
+                    ["misscount", "ASC"],
                 ]
-              })
+            })
             const complete = await aimScores.count({
-                where: {user_id: score.user_id, collection: collectionName, mods: mods}
-              })
-            console.log("asdad"+preEntry)
-            console.log("asd"+complete)
-            let congrats = "logged new score into "+validMap.collection+"!"
-            if(preEntry == currentCollection - 1 && complete == currentCollection){
+                where: { user_id: score.user_id, collection: collectionName, mods: mods }
+            })
+            console.log("asdad" + preEntry)
+            console.log("asd" + complete)
+            let newmap = "";
+            if(added) {
+                newmap = "and map"
+            }
+            let congrats = "logged new score "+newmap+" into " + validMap.collection + "!"
+            if (preEntry == currentCollection - 1 && complete == currentCollection) {
                 const mod = mods.substring(1)
                 console.log("applied role")
-                congrats = "🎉 congrats on "+mod+" completion for "+validMap.collection+"! 🎉"
+                congrats = "🎉 congrats on " + mod + " completion for " + validMap.collection + "! 🎉"
                 //redo conditionals for giving hundo role
                 //get guild member object from the user id from the score, not the message
-                if(collectionName == currentD1Collection){
-                    if(mod == "NM") await message.member.roles.add(nmRole).catch(console.error);
-                    if(mod == "HR") await message.member.roles.add(hrRole).catch(console.error);
-                } else if(collectionName == currentD2Collection){
-                    if(mod == "NM") await message.member.roles.add("1366104494072401980").catch(console.error);
-                    if(mod == "HR") await message.member.roles.add("1366104856502468750").catch(console.error);
+                if (collectionName == currentD1Collection) {
+                    if (mod == "NM") await message.member.roles.add(nmRole).catch(console.error);
+                    if (mod == "HR") await message.member.roles.add(hrRole).catch(console.error);
+                } else if (collectionName == currentD2Collection) {
+                    if (mod == "NM") await message.member.roles.add("1366104494072401980").catch(console.error);
+                    if (mod == "HR") await message.member.roles.add("1366104856502468750").catch(console.error);
                 }
                 //fix this
-                if(await message.member.roles.cache.has(nmRole) && await message.member.roles.cache.has(hrRole)){
-                    congrats = "🎉🎉🎉 congrats on 100% completion for "+validMap.collection+"!!! 🎉🎉🎉"
+                if (await message.member.roles.cache.has(nmRole) && await message.member.roles.cache.has(hrRole)) {
+                    congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉"
                     message.member.roles.add(hundoRole).catch(console.error);
                 }
             }
             let checking = true;
             let i = 0;
             let rank = 0;
-            while(checking){
-                const found = await aimScores.findOne({where: {map_id: score.beatmap.id, user_id: score.user_id, date: score.created_at}, order: [["misscount", "ASC"]]})
+            while (checking) {
+                const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, user_id: score.user_id, date: score.created_at }, order: [["misscount", "ASC"]] })
                 //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
-                if(found.misscount <= scores[i].misscount){
+                if (found.misscount <= scores[i].misscount) {
                     rank = Number(i) + 1;
                     checking = false;
                 }
-                if(i == scores.length - 1){
+                if (i == scores.length - 1) {
                     rank = Number(i) + 1;
                     checking = false;
                 }
                 i++;
             }
-            return congrats+"\nnew leaderboard rank: **#"+rank+"**/"+scores.length
+            return congrats + "\nnew leaderboard rank: **#" + rank + "**/" + scores.length
         }
     }
 }
@@ -756,7 +798,7 @@ module.exports = {
                     let progress = "@" + Math.round(percentage) + "%";
                     if (percentage == 100) progress = "";
                     //console.log(score);
-                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message, lazer, ppData.details)
+                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message, lazer, ppData.details, api)
                     const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                     message.channel.send({ content: leaderboardString, embeds: [rsEmbed] });
                 } catch (err) {

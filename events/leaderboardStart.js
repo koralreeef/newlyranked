@@ -155,7 +155,7 @@ async function buildEmbed(ind, toggle, backward, forward) {
             userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + " ** "+emoji+" " + totalString + " **" + current.speciality + "**\n")
         }
     }
-    console.log(userString)
+    //console.log(userString)
     const d = new Date();
 
     if(validUsers.length < 1){

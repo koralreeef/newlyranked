@@ -70,7 +70,7 @@ module.exports = {
         .setName('submit')
         .setDescription('submits all passed plays within the last 24h')
         .addBooleanOption(option =>
-            option.setName('show')
+            option.setName('private')
                 .setDescription('submit privately? (false for no)')
                 .setRequired(true)),
 
@@ -88,7 +88,7 @@ module.exports = {
             scores = await api.users.getUserScores(user.osu_id, 'recent', {
                 query: {
                     mode: 'osu',
-                    limit: 1,
+                    limit: 100,
                     include_fails: false
                 }
             });
@@ -107,6 +107,43 @@ module.exports = {
         let newD2Misscount = 0;
         let oldD1Misscount = await misscount(user.osu_id, currentD1Collection);
         let oldD2Misscount = await misscount(user.osu_id, currentD2Collection);
+        const errorArray = []
+        const unfiltered = await aimLists.findAll({ attributes: ["creator"] })
+        const unique = [];
+
+        for (score in scores) {
+            const currentMapID = scores[score].beatmap.id
+            const validMap = await aimLists.findOne({ where: { map_id: currentMapID } })
+            for (entry in unfiltered){
+                if (!unique.includes(unfiltered[entry].creator)) unique.push(unfiltered[entry].creator)
+            }
+            if(!validMap){
+                let beatmap;
+                try {
+                    beatmap = await api.beatmaps.getBeatmap(currentMapID);
+                } catch (err) {
+                    errorArray.push(currentMapID)
+                }
+                if(unique.includes(beatmap.beatmapset.creator)){
+                    await aimLists.create({
+                        map_id: currentMapID,
+                        set_id: beatmap.beatmapset_id,
+                        collection: beatmap.beatmapset.creator,
+                        adder: user.username,
+                        difficulty: beatmap.version,
+                        title: beatmap.beatmapset.title,
+                        artist: beatmap.beatmapset.artist,
+                        creator: beatmap.beatmapset.creator,
+                        creatorID: beatmap.beatmapset.user_id,
+                        is_current: 0
+                    })
+                    console.log("added " + beatmap.beatmapset.title)
+                }
+            } else {
+            console.log(validMap.title+" already exists")
+            }
+        }
+        console.log(unique)
         for (score in scores) {
             const currentScore = scores[score]
             let mods = "+NM";
@@ -130,7 +167,7 @@ module.exports = {
                 const map = new rosu.Beatmap(bytes);
 
                 const aimScore = await aimScores.findOne({ where: { user_id: user.osu_id, map_id: beatmapID, mods: mods } })
-                const maxAttrs = new rosu.Performance({ mods: mods, lazer: false }).calculate(map);
+                const maxAttrs = new rosu.Performance({ mods: currentScore.mods, lazer: false }).calculate(map);
                 const currAttrs = new rosu.Performance({
                     mods: currentScore.mods, // Must be the same as before in order to use the previous attributes!
                     misses: currentScore.statistics.count_miss,
@@ -155,7 +192,6 @@ module.exports = {
                         aimScore.accuracy = accuracy;
                         aimScore.combo = currentScore.max_combo;
                         aimScore.date = currentScore.created_at;
-                        aimScore.max_combo = currentScore.max_combo;
                         aimScore.hidden = hidden;
                         console.log("updating misscount...")
                         aimScore.save();
@@ -183,7 +219,7 @@ module.exports = {
                 //console.log(user.username+": "+currentScore.score+" / mods: "+currentScore.mods+" / pp: "+
                 //(currAttrs.pp).toFixed(2)+" / misscount: "+currentScore.statistics.count_miss+" / combo: "+currentScore.max_combo+"/"+maps.max_combo+" "+string)
             } else {
-                console.log("user not found or failed")
+                console.log("map not found")
             }
             fs.unlink("./maps"+epoch+"/" + beatmapID + ".osu", function (err) {
                 //console.log(err);

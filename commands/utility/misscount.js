@@ -1,11 +1,9 @@
-const { Events, EmbedBuilder } = require('discord.js');
-const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
-const { currentD1Collection, currentD2Collection } = require('../config.json');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { aimLists, aimScores, osuUsers } = require('../../db/dbObjects.js');
+const { currentD1Collection, currentD2Collection } = require('../../config.json');
 const { lightskyblue } = require("color-name");
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
-
-const regex = /^\.misscount/gm;
 
 async function misscountByMod(uID, mod, d) {
     let divName = d;
@@ -173,61 +171,63 @@ async function calcTotal(uID, c) {
 }
 
 module.exports = {
-    name: Events.MessageCreate,
-    async execute(message) {
-        let msg = message.content;
-        /*
-        console.log(message.type);
-        if(message.type == 19){
-        const repliedMessage = await message.fetchReference();
-        console.log(repliedMessage.content);
-        console.log("found this: "+repliedMessage);
-        }
-        console.log(message.content);
-        */
-        if (regex.test(msg.substring(0, 11))) {
-            let collectionStr = 0
-            let username = "";
-            if (msg.indexOf("u=") == -1) {
-                const self = await osuUsers.findOne({ where: { user_id: message.author.id } });
-                if (self) {
-                    username = self.username
-                } else {
-                    return await message.channel.send("use /osuset first")
-                }
-                collectionStr = msg.length;
-            } else {
-                username = msg.substring(msg.indexOf("u=") + 2)
+    data: new SlashCommandBuilder()
+      .setName('misscount')
+      .setDescription('check misscounts for a collection')
+      .addStringOption(option =>
+        option.setName('collection')
+          .setAutocomplete(true)
+          .setDescription('defaults to current season'))
+      .addUserOption(option =>
+        option.setName('user')
+          .setDescription('highlights a users scores on the lb; defaults to you'))
+      .addBooleanOption(option =>
+        option.setName('private')
+          .setDescription('view privately? (false for no)')),
+  
+    async autocomplete(interaction) {
+      const focusedValue = interaction.options.getFocused();
+      const collections = await aimLists.findAll();
+      const unique = [];
+      for (entry in collections){
+        if (!unique.includes(collections[entry].collection)) unique.push(collections[entry].collection)
+      }
+      const filtered = unique
+        .filter((choice) => choice.startsWith(focusedValue))
+        .slice(0, 5);
+      await interaction.respond(
+        filtered.map((choice) => ({ name: choice, value: choice })),
+      );
+    },
+    async execute(interaction) {
+        const ephemeral = interaction.options.getBoolean("private") ?? false;
+        const collectionName = interaction.options.getString("collection") ?? currentD1Collection;
+        //CAN WE GET SERIOUS
+        const inputUser = interaction.options.getUser("user") ?? interaction.user
+        console.log(inputUser.id)
+        const self = await osuUsers.findOne({ where: { user_id: inputUser.id } });
+        if(!self) return await interaction.reply({ content: "use /osuset before using this command", ephemeral: true })
+        const username = self.username
+        await interaction.deferReply({ephemeral: ephemeral })
+        let aimList = await aimLists.findAll({
+            where: { collection: collectionName },
+            order: [
+              ["map_id", "DESC"],
+            ]
+          });
 
-                collectionStr = msg.indexOf("u=") - 1;
-            }
-            let collectionName = "";
-            if (msg.indexOf("c=") > 0) {
-                collectionName = msg.substring(msg.indexOf("c=") + 2, collectionStr);
-            } else {
-                collectionName = currentD1Collection;
-            }
-            if (msg.substring(10, 11) == "2") {
-                collectionName = currentD2Collection;
-            }
-            console.log(collectionName)
-            console.log(username)
-            if (msg === ".misscount") {
-                const self = await osuUsers.findOne({ where: { user_id: message.author.id } });
-                if (self) {
-                    username = self.username
-                } else {
-                    return await message.channel.send("use /osuset first")
+        if (aimList.length < 1) {
+            return interaction.followUp("couldnt find collection")
+        }
+        console.log("asdasd " + collectionName)
+      
+        const check = await osuUsers.findOne({
+            where: {
+                username: {
+                    [Op.like]: username.toLowerCase()
                 }
-                is_current = 1;
-            }
-            const check = await osuUsers.findOne({
-                where: {
-                    username: {
-                        [Op.like]: username.toLowerCase()
-                    }
-                },
-            });
+            },
+        });
         if (check) {
             const hr = await misscountByMod(check.osu_id, "+HR", collectionName);
             const nm = await misscountByMod(check.osu_id, "+NM", collectionName);
@@ -280,11 +280,11 @@ module.exports = {
                 .setDescription(description)
                 .setColor(lightskyblue)
                 .setFooter({ text: "great job!" });
-            return await message.channel.send({ embeds: [misscountEmbed] })
-            } else {
-                return message.channel.send("user or collection not found, use /osuset")
-            }
+            return await interaction.followUp({ embeds: [misscountEmbed] })
+        } else {
+            return await interaction.followUp("user or collection not found, use /osuset")
         }
+
     }
 }
 

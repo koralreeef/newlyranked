@@ -44,7 +44,7 @@ module.exports = {
       const check = await aimLists.findAll({where: {collection: collectionName}})
       if(check < 1) return await message.channel.send("no collection found");
       const collection = await buildEmbed(check);
-      collection.setAuthor({ name: "Listed collection: "+collectionName })
+      collection.setAuthor({ name: "Listed collection: "+collectionName+" ("+check.length+" maps)" })
       return message.channel.send({ embeds: [collection] });
     } 
     const collection = await buildEmbed(maps); 
