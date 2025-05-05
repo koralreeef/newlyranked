@@ -14,7 +14,7 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function misscount(osu_id, divName){
+async function misscount(osu_id, divName) {
     let total = 0;
     let totalMaps = 0;
     let nmMaps = 0;
@@ -23,42 +23,42 @@ async function misscount(osu_id, divName){
     const mapIDs = []
     const unique = []
     //???
-    for(score in scores){
-      if(!mapIDs.includes(scores[score].map_id)){
-        mapIDs.push(scores[score].map_id)
-        unique.push(scores[score])
-      }
+    for (score in scores) {
+        if (!mapIDs.includes(scores[score].map_id)) {
+            mapIDs.push(scores[score].map_id)
+            unique.push(scores[score])
+        }
     }
     let processing = true
-    while(processing) {
-      const scoreNM = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+NM" } })
-      const scoreHR = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+HR" } })
-      if (scoreNM && scoreHR) {
-        totalMaps++;
-        if (scoreNM.misscount > scoreHR.misscount) {
-          total = total + scoreHR.misscount
-          hrMaps++;
-        } else if (scoreNM.misscount < scoreHR.misscount){
-          total = total + scoreNM.misscount
-          nmMaps++;
-        } else if (scoreNM.misscount == scoreHR.misscount){
-          total = total + scoreNM.misscount
-          hrMaps++;
-        }
-      } else {
-        if(scoreNM){
-          totalMaps++;
-          total = total + scoreNM.misscount
-          nmMaps++;
-        } else if(scoreHR){
-          totalMaps++;
-          total = total + scoreHR.misscount
-          hrMaps++;
+    while (processing) {
+        const scoreNM = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+NM" } })
+        const scoreHR = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+HR" } })
+        if (scoreNM && scoreHR) {
+            totalMaps++;
+            if (scoreNM.misscount > scoreHR.misscount) {
+                total = total + scoreHR.misscount
+                hrMaps++;
+            } else if (scoreNM.misscount < scoreHR.misscount) {
+                total = total + scoreNM.misscount
+                nmMaps++;
+            } else if (scoreNM.misscount == scoreHR.misscount) {
+                total = total + scoreNM.misscount
+                hrMaps++;
+            }
         } else {
+            if (scoreNM) {
+                totalMaps++;
+                total = total + scoreNM.misscount
+                nmMaps++;
+            } else if (scoreHR) {
+                totalMaps++;
+                total = total + scoreHR.misscount
+                hrMaps++;
+            } else {
 
+            }
         }
-      }
-      if(totalMaps == unique.length) processing = false;
+        if (totalMaps == unique.length) processing = false;
     }
     return total
 }
@@ -79,9 +79,9 @@ module.exports = {
         const user = await osuUsers.findOne({ where: { user_id: interaction.user.id } })
         if (!user) return await interaction.reply({ content: 'please use /osuset before using this command', ephemeral: true });
         //show misscount change (if any), show mapcount change (if any)
-        await interaction.deferReply({ephemeral: ephemeral});
+        await interaction.deferReply({ ephemeral: ephemeral });
         const epoch = Date.now();
-        
+
         const api = new Client(await getAccessToken());
         let scores;
         try {
@@ -96,7 +96,7 @@ module.exports = {
             console.log(err)
             return await interaction.followUp("no score found or you didnt use /osuset");
         }
-        const dir = fs.mkdirSync("./maps"+epoch);
+        const dir = fs.mkdirSync("./maps" + epoch);
         await sleep(1_000)
 
         const balls = []
@@ -108,27 +108,33 @@ module.exports = {
         let oldD1Misscount = await misscount(user.osu_id, currentD1Collection);
         let oldD2Misscount = await misscount(user.osu_id, currentD2Collection);
         const errorArray = []
-        const unfiltered = await aimLists.findAll({ attributes: ["creator"] })
-        const unique = [];
-
         for (score in scores) {
+            const unfiltered = await aimLists.findAll()
+            const unique = [];
+            for (entry in unfiltered) {
+                if (!unique.includes(unfiltered[entry].creatorID)) unique.push(unfiltered[entry].creatorID)
+            }
             const currentMapID = scores[score].beatmap.id
             const validMap = await aimLists.findOne({ where: { map_id: currentMapID } })
-            for (entry in unfiltered){
-                if (!unique.includes(unfiltered[entry].creator)) unique.push(unfiltered[entry].creator)
-            }
-            if(!validMap){
+            if (!validMap) {
                 let beatmap;
                 try {
                     beatmap = await api.beatmaps.getBeatmap(currentMapID);
                 } catch (err) {
-                    errorArray.push(currentMapID)
+                    console.log(err)
                 }
-                if(unique.includes(beatmap.beatmapset.creator)){
+                console.log(beatmap.beatmapset.user_id+" "+unique[11])
+                if (unique.includes(String(beatmap.beatmapset.user_id))) {
+                    let mapper = "";
+                    try {
+                        mapper = await api.users.getUser(beatmap.beatmapset.user_id);
+                    } catch (err) {
+                        console.log(err)
+                    }
                     await aimLists.create({
-                        map_id: currentMapID,
+                        map_id: beatmap.id,
                         set_id: beatmap.beatmapset_id,
-                        collection: beatmap.beatmapset.creator,
+                        collection: mapper.username,
                         adder: user.username,
                         difficulty: beatmap.version,
                         title: beatmap.beatmapset.title,
@@ -140,10 +146,9 @@ module.exports = {
                     console.log("added " + beatmap.beatmapset.title)
                 }
             } else {
-            console.log(validMap.title+" already exists")
+                console.log(validMap.title + " already exists")
             }
         }
-        console.log(unique)
         for (score in scores) {
             const currentScore = scores[score]
             let mods = "+NM";
@@ -160,10 +165,10 @@ module.exports = {
                     type: 'difficulty',
                     host: 'osu',
                     id: beatmapID,
-                    file_path: "./maps"+epoch+"/" + beatmapID + ".osu"
+                    file_path: "./maps" + epoch + "/" + beatmapID + ".osu"
                 });
-        
-                const bytes = fs.readFileSync("./maps"+epoch+"/" + beatmapID + ".osu");
+
+                const bytes = fs.readFileSync("./maps" + epoch + "/" + beatmapID + ".osu");
                 const map = new rosu.Beatmap(bytes);
 
                 const aimScore = await aimScores.findOne({ where: { user_id: user.osu_id, map_id: beatmapID, mods: mods } })
@@ -175,15 +180,15 @@ module.exports = {
                     accuracy: currentScore.accuracy * 100,
                     combo: currentScore.max_combo,
                 }).calculate(maxAttrs);
-                if(!balls.includes(currentScore.beatmapset.artist+" - "+currentScore.beatmapset.title+" ["+currentScore.beatmap.version+"]"))
-                balls.push(currentScore.beatmapset.artist+" - "+currentScore.beatmapset.title+" ["+currentScore.beatmap.version+"]")
+                if (!balls.includes(currentScore.beatmapset.artist + " - " + currentScore.beatmapset.title + " [" + currentScore.beatmap.version + "]"))
+                    balls.push(currentScore.beatmapset.artist + " - " + currentScore.beatmapset.title + " [" + currentScore.beatmap.version + "]")
                 let accuracy = (currentScore.accuracy * 100).toFixed(2)
                 if (aimScore) {
                     if (currentScore.statistics.count_miss < aimScore.misscount) {
-                        if(aimScore.collection == currentD1Collection){
+                        if (aimScore.collection == currentD1Collection) {
                             newD1Misscount = newD1Misscount + (Number(aimScore.misscount) - Number(currentScore.statistics.count_miss))
                         }
-                        if(aimScore.collection == currentD2Collection){
+                        if (aimScore.collection == currentD2Collection) {
                             newD2Misscount = newD2Misscount + (aimScore.misscount - currentScore.statistics.count_miss)
                         }
                         aimScore.misscount = currentScore.statistics.count_miss;
@@ -221,30 +226,30 @@ module.exports = {
             } else {
                 console.log("map not found")
             }
-            fs.unlink("./maps"+epoch+"/" + beatmapID + ".osu", function (err) {
+            fs.unlink("./maps" + epoch + "/" + beatmapID + ".osu", function (err) {
                 //console.log(err);
             });
         }
-        fs.rmdir("./maps"+epoch, function (err){
+        fs.rmdir("./maps" + epoch, function (err) {
             console.log(err);
         });
         //console.log(balls)
-        console.log("fgfd"+newD1Misscount)
-        let text = mapCount+" new scores logged!\n"
+        console.log("fgfd" + newD1Misscount)
+        let text = mapCount + " new scores logged!\n"
         let text3 = "";
         let text2 = "";
         let text4 = "";
         const totalD1 = Math.abs(oldD1Misscount - newD1Misscount);
         const totalD2 = Math.abs(oldD2Misscount - newD2Misscount);
-        if(newD1Misscount > 0) text3 = "new D1 misscount: "+oldD1Misscount+" -> "+totalD1+"\n"
-        if(newD2Misscount > 0) text4 = "new D2 misscount: "+oldD2Misscount+" -> "+totalD2+"\n"
-        if(balls.length > 0){
+        if (newD1Misscount > 0) text3 = "new D1 misscount: " + oldD1Misscount + " -> " + totalD1 + "\n"
+        if (newD2Misscount > 0) text4 = "new D2 misscount: " + oldD2Misscount + " -> " + totalD2 + "\n"
+        if (balls.length > 0) {
             text2 = "maps played:\n"
-            for(maps in balls){
+            for (maps in balls) {
                 text2 = text2 + balls[maps] + "\n"
             }
         }
-        if(balls.length < 1) text = "no maps from lbs found"
+        if (balls.length < 1) text = "no maps from lbs found"
         return await interaction.followUp({ content: text + text3 + text4 + text2 });
     },
 };

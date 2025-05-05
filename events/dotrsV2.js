@@ -16,12 +16,15 @@ const regex3 = /^\.rs[0-9]+ /gm;
 
 async function createLeaderboard(api, id, user) {
     let added = false;
-    const validMap = await aimLists.findOne({ where: { map_id: id } })
     const unique = []
-    const unfiltered = await aimLists.findAll({ attributes: ["creator"] })
+    const unfiltered = await aimLists.findAll()
     for (entry in unfiltered) {
-        if (!unique.includes(unfiltered[entry].creator)) unique.push(unfiltered[entry].creator)
+        if (!unique.includes(unfiltered[entry].creatorID)){ 
+            unique.push(unfiltered[entry].creatorID)
+        }
     }
+    let mapperUsername = "";
+    const validMap = await aimLists.findOne({ where: { map_id: id } })
     if (!validMap) {
         let beatmap;
         try {
@@ -29,16 +32,23 @@ async function createLeaderboard(api, id, user) {
         } catch (err) {
             console.log(err)
         }
-        if (unique.includes(beatmap.beatmapset.creator)) {
+        if (unique.includes(String(beatmap.beatmapset.user_id))) {
+            let mapper = "";
+            try {
+                mapper = await api.users.getUser(beatmap.beatmapset.user_id);
+            } catch (err) {
+                console.log(err)
+            }
+            mapperUsername = mapper.username
             await aimLists.create({
                 map_id: id,
                 set_id: beatmap.beatmapset_id,
-                collection: beatmap.beatmapset.creator,
+                collection: mapperUsername,
                 adder: user,
                 difficulty: beatmap.version,
                 title: beatmap.beatmapset.title,
                 artist: beatmap.beatmapset.artist,
-                creator: beatmap.beatmapset.creator,
+                creator: mapper.username,
                 creatorID: beatmap.beatmapset.user_id,
                 is_current: 0
             })

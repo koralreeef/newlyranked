@@ -14,6 +14,49 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function createLeaderboard(mappers, api, id, user) {
+    let added = "";
+    let mapperUsername = "";
+    const validMap = await aimLists.findOne({ where: { map_id: id } })
+    if (!validMap) {
+        let beatmap;
+        try {
+            beatmap = await api.beatmaps.getBeatmap(id);
+        } catch (err) {
+            console.log(err)
+        }
+        if (mappers.includes(String(beatmap.beatmapset.user_id))) {
+            let mapper = "";
+            try {
+                mapper = await api.users.getUser(beatmap.beatmapset.user_id);
+            } catch (err) {
+                console.log(err)
+            }
+            mapperUsername = mapper.username
+            await aimLists.create({
+                map_id: id,
+                set_id: beatmap.beatmapset_id,
+                collection: mapperUsername,
+                adder: user,
+                difficulty: beatmap.version,
+                title: beatmap.beatmapset.title,
+                artist: beatmap.beatmapset.artist,
+                creator: mapper.username,
+                creatorID: beatmap.beatmapset.user_id,
+                is_current: 0
+            })
+            console.log("added " + beatmap.beatmapset.title)
+            added = beatmap.beatmapset.artist+" - "+beatmap.beatmapset.title+" ["+beatmap.version+"]"
+        }
+    } else {
+        console.log(validMap.title + " already exists")
+    }
+    return {
+        added: added,
+        creator: mapperUsername
+    }
+}
+
 function arrayToString(array) {
     let string = "";
     for(index in array){
@@ -21,6 +64,18 @@ function arrayToString(array) {
             string = string + array[index]
         } else {
             string = string + array[index] +", "   
+        }
+    }
+    return string
+}
+
+function arrayToString2(array) {
+    let string = "";
+    for(index in array){
+        if(index == array.length - 1){ 
+            string = string + array[index]
+        } else {
+            string = string + array[index] +"\n"   
         }
     }
     return string
@@ -40,7 +95,7 @@ module.exports = {
         const user = await osuUsers.findOne({ where: { user_id: interaction.user.id } })
         if (!user) return await interaction.reply({ content: 'please use /osuset before using this command', ephemeral: true });
         const match_id = interaction.options.getString('multi_id')
-
+        let jsAPI = new Client(await getAccessToken());
         let mapCount = 0;
         const players = [];
         const collections = [];
@@ -92,25 +147,35 @@ module.exports = {
             }
         }
 
+        const unique = []
+        const unfiltered = await aimLists.findAll()
+        for (entry in unfiltered) {
+            if (!unique.includes(unfiltered[entry].creatorID)){ 
+                unique.push(unfiltered[entry].creatorID)
+            }
+        }
         const dir = fs.mkdirSync("./maps" + epoch);
         await sleep(1_000)
-
-        for (maps in matchArray) {
+        //console.log(unique)
+        const newMaps = [];
+        for (maps in matchArray) {  
             const gameScores = matchArray[maps].game.scores;
             const beatmap = matchArray[maps].game.beatmap_id;
-            await tools.download_beatmaps({
-                type: 'difficulty',
-                host: 'osu',
-                id: beatmap,
-                file_path: "./maps" + epoch + "/" + beatmap + ".osu"
-            });
-
-            const bytes = fs.readFileSync("./maps" + epoch + "/" + beatmap + ".osu");
-            const map = new rosu.Beatmap(bytes);
-
+            const newMap = await createLeaderboard(unique, jsAPI, beatmap, user.username)
+            console.log(newMap.added)
+            if((newMap.added).length > 0) newMaps.push(newMap.added) 
             const beatmapData = await aimLists.findOne({ where: { map_id: beatmap } })
-            const found = await aimScores.findOne({ where: { map_id: beatmap } });
+            const found = await aimScores.findOne({ where: { map_id: beatmap } }) ?? newMap.creator;
             if (beatmapData) {
+                await tools.download_beatmaps({
+                    type: 'difficulty',
+                    host: 'osu',
+                    id: beatmap,
+                    file_path: "./maps" + epoch + "/" + beatmap + ".osu"
+                });
+    
+                const bytes = fs.readFileSync("./maps" + epoch + "/" + beatmap + ".osu");
+                const map = new rosu.Beatmap(bytes);
                 console.log("map: " + beatmapData.artist + " - " + beatmapData.title + " ["+beatmapData.difficulty+"]"
                 )
                 if(!mapList.includes(beatmapData.artist + " - " + beatmapData.title + " ["+beatmapData.difficulty+"]")) {
@@ -130,7 +195,7 @@ module.exports = {
                         if (currentScore.mods.includes("HD")) hidden = true;
                         const maps = await aimScores.findOne({ where: { map_id: beatmap } })
                         const aimScore = await aimScores.findOne({ where: { user_id: user.osu_id, map_id: beatmap, mods: mods } })
-                        const maxAttrs = new rosu.Performance({ mods: mods, lazer: false }).calculate(map);
+                        const maxAttrs = new rosu.Performance({ mods: currentScore.mods, lazer: false }).calculate(map);
                         const currAttrs = new rosu.Performance({
                             mods: currentScore.mods, // Must be the same as before in order to use the previous attributes!
                             misses: currentScore.statistics.count_miss,
@@ -155,7 +220,7 @@ module.exports = {
                         } else {
                             await aimScores.create({
                                 map_id: beatmap,
-                                collection: found.collection,
+                                collection: found,
                                 index: beatmapData.id,
                                 user_id: user.osu_id,
                                 username: user.username,
@@ -171,27 +236,33 @@ module.exports = {
                                 is_current: 0
                             });
                         }
-                        console.log(user.username+": "+currentScore.score+" / mods: "+currentScore.mods+" / pp: "+
-                        (currAttrs.pp).toFixed(2)+" / misscount: "+currentScore.statistics.count_miss+" / combo: "+currentScore.max_combo+"/"+maps.max_combo)
+                        //console.log(user.username+": "+currentScore.score+" / mods: "+currentScore.mods+" / pp: "+
+                        //(currAttrs.pp).toFixed(2)+" / misscount: "+currentScore.statistics.count_miss+" / combo: "+currentScore.max_combo+"/"+maps.max_combo)
                     } else {
                         console.log("user not found or failed")
                     }
                 }
+                map.free();
+                fs.unlink("./maps" + epoch + "/" + beatmap + ".osu", function (err) {
+                    console.log(err);
+                });
             } else {
                 console.log("map not found in collections, skipping...")
             }
-            map.free();
-            fs.unlink("./maps" + epoch + "/" + beatmap + ".osu", function (err) {
-                console.log(err);
-            });
         }
         await sleep(1000)
         fs.rmdir("./maps" + epoch + "/", function (err) {
             console.log(err);
         });
         const playerString = arrayToString(players);
+        const newMapsString = arrayToString2(newMaps);
+        let finalMaps = "";
+        console.log(newMaps)
+        if(newMapsString.length > 0){
+            finalMaps = "new maps added: "+newMapsString
+        }
         const collectionsString = arrayToString(collections);
-        return await interaction.followUp({ content: "found "+mapCount+" maps in lobby https://osu.ppy.sh/community/matches/"+match_id+" \nplayers: "+playerString+"\ncollections: "+collectionsString });
+        return await interaction.followUp({ content: "found "+mapCount+" maps in lobby https://osu.ppy.sh/community/matches/"+match_id+" \nplayers: "+playerString+"\ncollections: "+collectionsString+"\n"+finalMaps });
     },
 };
 
