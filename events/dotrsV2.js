@@ -353,17 +353,21 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
                 i = 0;
                 let rank = 0;
                 const scores = await aimScores.findAll({ where: { map_id: beatmap.id, mods: leaderboardMods }, order: [["misscount", "ASC"]] })
-                while (checking) {
-                    const found = await aimScores.findOne({ where: { map_id: beatmap.id, mods: leaderboardMods, user_id: user.id } })
-                    if (found.user_id == scores[i].user_id) {
-                        rank = Number(i) + 1;
-                        checking = false;
+                const found = await aimScores.findOne({ where: { map_id: beatmap.id, mods: leaderboardMods, user_id: user.id } })
+                if(found){
+                    while (checking) {
+                        if (found.user_id == scores[i].user_id) {
+                            rank = Number(i) + 1;
+                            checking = false;
+                        }
+                        if (i == scores.length - 1) {
+                            rank = Number(i) + 1;
+                            checking = false;
+                        }
+                        i++;
                     }
-                    if (i == scores.length - 1) {
-                        rank = Number(i) + 1;
-                        checking = false;
-                    }
-                    i++;
+                } else {
+                    rank = 1;
                 }
                 modleaderboardIndex = " **(#" + rank + ")**";
             }
@@ -416,12 +420,13 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
     if (modArray.includes("HD")) {
         hidden = true
     }
+    if (modArray.includes("DT")) {
+        mods = mods + "DT";
+    }
     if (modArray.includes("HR")) {
         mods = mods + "HR"
     }
-    else if (modArray.includes("DT")) {
-        mods = mods + "DT";
-    } else {
+    if(mods === "+"){
         mods = mods + "NM";
     }
     if (lazer) {
@@ -449,10 +454,13 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
     const validMap = await aimLists.findOne({
         where: { map_id: score.beatmap.id }
     })
-    console.log("check check" + validMap)
+    //IS THIS N OR IS THIS DIVINE INTELLECT 
+    let dtCheck = !(validMap.required_dt && !mods.includes("+DT"))
+ 
+    console.log("check check" + validMap +"\ndt check "+dtCheck)
     //check for time later
     //add patch from test2.js for storing multiple scores
-    if (validMap && score.passed) {
+    if (validMap && score.passed && dtCheck) {
         let collectionName = currentD1Collection;
         if (validMap.collection == currentD2Collection) {
             collectionName = currentD2Collection
@@ -525,7 +533,8 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                 max_combo: blob.stats.difficulty.maxCombo,
                 date: score.created_at,
                 hidden: hidden,
-                is_current: is_current
+                is_current: is_current,
+                required_dt: validMap.required_dt
             });
             const scores = await aimScores.findAll({
                 where: { map_id: score.beatmap.id },
@@ -540,9 +549,9 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
             console.log("asd" + complete)
             let newmap = "";
             if(added) {
-                newmap = "and map"
+                newmap = " and map"
             }
-            let congrats = "logged new score "+newmap+" into " + validMap.collection + "!"
+            let congrats = "logged new score"+newmap+" into " + validMap.collection + "!"
             if (preEntry == currentCollection - 1 && complete == currentCollection) {
                 const mod = mods.substring(1)
                 console.log("applied role")
@@ -569,7 +578,8 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                 const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, user_id: score.user_id, date: score.created_at }, order: [["misscount", "ASC"]] })
                 //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
                 if (found.misscount <= scores[i].misscount) {
-                    rank = Number(i) + 1;
+                    const sameCount = await aimScores.count({ where: { map_id: score.beatmap.id, mods: mods, misscount: found.misscount }})
+                    rank = Number(i) + 1 + sameCount;
                     checking = false;
                 }
                 if (i == scores.length - 1) {

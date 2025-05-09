@@ -33,6 +33,9 @@ module.exports = (sequelize, DataTypes) => {
 		},
 		is_current: {
 			type: DataTypes.INTEGER
+		},
+		required_dt: {
+			type: DataTypes.BOOLEAN,
 		}
 	}, {
 		timestamps: false,

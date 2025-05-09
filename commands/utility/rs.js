@@ -86,7 +86,7 @@ async function calcLazerPP(score, map, total, modString) {
     let adjustSettings = [];
     let clockSettings = [];
     let dt = false;
-    console.log(details);
+    //console.log(details);
     for (const mod of details.mods) {
         if (mod.acronym === "DA") {
             adjustSettings = mod.settings;
@@ -313,7 +313,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
             rank = "<:frank:1324404867208450068>"
             break;
     }
-    console.log(specialString);
+    //console.log(specialString);
     let diffValues = await findMapStats(blob, beatmap, clockRate, cs);
     let t = score.created_at;
     let date = Date.parse(t);

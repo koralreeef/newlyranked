@@ -1,10 +1,10 @@
 const Sequelize = require('sequelize');
-
+const { database } = require('../config.json') 
 const sequelize = new Sequelize('database', 'username', 'password', {
 	host: 'localhost',
 	dialect: 'sqlite',
 	logging: false,
-	storage: 'database.sqlite',
+	storage: database,
 });
 
 const osuUsers = require('./models/osuUsers.js')(sequelize, Sequelize.DataTypes);

@@ -37,7 +37,7 @@ async function createLeaderboard(mappers, api, id, user) {
                 map_id: id,
                 set_id: beatmap.beatmapset_id,
                 collection: mapperUsername,
-                adder: user,
+                adder: "multi",
                 difficulty: beatmap.version,
                 title: beatmap.beatmapset.title,
                 artist: beatmap.beatmapset.artist,
@@ -220,7 +220,7 @@ module.exports = {
                         } else {
                             await aimScores.create({
                                 map_id: beatmap,
-                                collection: found,
+                                collection: found.collection,
                                 index: beatmapData.id,
                                 user_id: user.osu_id,
                                 username: user.username,

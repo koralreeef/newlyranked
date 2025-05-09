@@ -75,7 +75,7 @@ module.exports = {
                 .setRequired(true)),
 
     async execute(interaction) {
-        const ephemeral = interaction.options.getBoolean("show");
+        const ephemeral = interaction.options.getBoolean("private");
         const user = await osuUsers.findOne({ where: { user_id: interaction.user.id } })
         if (!user) return await interaction.reply({ content: 'please use /osuset before using this command', ephemeral: true });
         //show misscount change (if any), show mapcount change (if any)

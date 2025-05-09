@@ -35,7 +35,7 @@ async function buildFull(map, ind, user, m) {
   for (let i = 0; i < scores.length; i++) {
     let scoreString = "";
     const current = scores[i];
-    console.log(current.user_id+", "+user)
+    //console.log(current.user_id+", "+user)
     if (scores.length < 1) {
       scoreString = "**no scores yet :(**"
       scoreArray.push(scoreString);
@@ -130,7 +130,10 @@ async function buildFull(map, ind, user, m) {
 }
 
 async function buildEmbed(map, ind, maxIndex, user) {
-  const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "]"
+  let dt = ""
+  if(map.required_dt) dt = "+DT"
+  console.log(map)
+  const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "] "+dt
   let name = "no misscount leader yet!"
   let iconLink = ""
   let pageNum = Number(ind) + 1;
@@ -342,15 +345,26 @@ module.exports = {
       let mod = "";
       collector.on("collect", async (m) => {
         //gray out buttons on page end
-        let magnifyMapCount = await aimScores.count({
+        let magnifyUnfiltered = await aimScores.findAll({
           where: { map_id: aimList[ind].map_id },
         })
         if(mod != ""){
-          magnifyMapCount = await aimScores.count({
+          magnifyUnfiltered = await aimScores.findAll({
             where: { map_id: aimList[ind].map_id, mods: mod },
           })
         }
-        let maxMagnifyIndex =  (magnifyMapCount / 15).toFixed(0)
+        //extra query :(((((((())))))))
+        const unique = []
+        if(magnifyUnfiltered.length > 0){
+          for(score in magnifyUnfiltered){
+            if(!unique.includes(magnifyUnfiltered[score].user_id)){
+              unique.push(magnifyUnfiltered[score].user_id)
+            }
+          }
+        }
+        let magnifyMapCount = unique.length
+        let maxMagnifyIndex = Math.trunc((unique.length / 15))
+        if(magnifyMapCount % 15 == 0) maxMagnifyIndex--
         if (m.customId === "back" + epoch) {
           ind--;
           if (ind == 0) backward.setDisabled(true);
@@ -374,6 +388,7 @@ module.exports = {
         }
         if (m.customId === "zoomOut" + epoch) {
           innerInd = 0;
+          magnifyBackward.setDisabled(true);
           mod = "";
           await m.update({
             embeds: [await buildEmbed(aimList[ind], ind, maxIndex, user)],
@@ -407,8 +422,7 @@ module.exports = {
           magnifyMapCount = await aimScores.count({
             where: { map_id: aimList[ind].map_id, mods: mod },
           })
-          maxMagnifyIndex = (magnifyMapCount / 15).toFixed(0)
-          if(magnifyMapCount < 15){
+          if(magnifyMapCount <= 15){
             magnifyForward.setDisabled(true);
             magnifyBackward.setDisabled(true);
           } else {
@@ -427,8 +441,7 @@ module.exports = {
           magnifyMapCount = await aimScores.count({
             where: { map_id: aimList[ind].map_id, mods: "+HR" },
           })
-          maxMagnifyIndex =  (magnifyMapCount / 15).toFixed(0)
-          if(magnifyMapCount < 15){
+          if(magnifyMapCount <= 15){
             magnifyForward.setDisabled(true);
             magnifyBackward.setDisabled(true);
           } else {

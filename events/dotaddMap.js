@@ -8,15 +8,25 @@ const regex = /^\.addmap/gm;
 
 async function buildEmbed(maps) {
     let mapArray = "";
+    
     for (map in maps) {
+        let dt = "";
         current = maps[map];
+        if(current.required_dt) dt = " +DT"
         const ind = Number(map) + 1
-        mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")**\n")
+        mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")"+dt+" **\n")
     }
     const scoreEmbed = new EmbedBuilder()
         .setDescription(mapArray)
         .setColor(lightskyblue)
     return scoreEmbed;
+}
+
+function getLength(s) {
+    minutes = Math.trunc(s / 60);
+    seconds = Math.trunc(s - minutes * 60);
+    if (seconds < 10) return minutes + ":0" + seconds;
+    return minutes + ":" + seconds;
 }
 
 module.exports = {
@@ -50,12 +60,21 @@ module.exports = {
                 console.log(collectionName)
                 const mapset = mapID.split("\n")
                 const newMaps = [];
+                let time = 0;
+                let difficulty = 0;
                 console.log(mapset)
                 if (mapset.length > 0) {
                     for (mapID in mapset) {
+                        let requiredDT = false;
+                        let current = mapset[mapID]
+                        if (current.includes(" +DT")){
+                            current = current.substring(0, current.indexOf(" +DT"))
+                            requiredDT = true;
+                        }
+                        console.log(current+", "+requiredDT)
                         let beatmap;
                         try {
-                            beatmap = await api.beatmaps.getBeatmap(mapset[mapID]);
+                            beatmap = await api.beatmaps.getBeatmap(current);
                         } catch (err) {
                             return message.channel.send("couldnt find beatmap");
                         }
@@ -68,10 +87,17 @@ module.exports = {
                         }
                         const map = await aimLists.findOne({ where: { map_id: beatmap.id } })
                         if (map) {
-                            message.channel.send(mapset[mapID]+" has already been added by " + map.adder + "!");
+                            if(map.collection == collectionName){
+                            message.channel.send(current+" has already been added by " + map.adder + "!");
+                            } else {
+                                map.collection = collectionName;
+                                map.required_dt = requiredDT;
+                                map.save();
+                            }
+                            newMaps.push(map)
                         } else {
                             const newMap = await aimLists.create({
-                                map_id: mapset[mapID].trim(),
+                                map_id: current.trim(),
                                 set_id: beatmap.beatmapset_id,
                                 collection: collectionName,
                                 adder: self.username,
@@ -80,13 +106,21 @@ module.exports = {
                                 artist: beatmap.beatmapset.artist,
                                 creator: beatmap.beatmapset.creator,
                                 creatorID: beatmap.beatmapset.user_id,
-                                is_current: is_current
+                                is_current: is_current,
+                                required_dt: requiredDT
                             })
                             newMaps.push(newMap)
+                            if(requiredDT) {
+                                time = time + Number((beatmap.hit_length * 0.5).toFixed(0))
+                            } else {
+                            time = time + beatmap.hit_length 
+                            }
+                            difficulty = difficulty + beatmap.difficulty_rating
                         }
                     }
                     const newmaps = await buildEmbed(newMaps);
-                    return await message.channel.send({ content: "added " + mapset.length + " map(s) to " + collectionName + "!\n", embeds: [newmaps] })
+                    difficulty = (difficulty / mapset.length).toFixed(2)
+                    return await message.channel.send({ content: "added " + mapset.length + " map(s) to " + collectionName + "!\ntotal length: "+getLength(time)+"\naverage sr: "+difficulty+"*", embeds: [newmaps] })
                 } else {
                     return message.channel.send("wheres the maps buddy")
                 }

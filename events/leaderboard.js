@@ -1,7 +1,7 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
 const { leaderboardChannel, leaderboardMessage, currentD1Collection, currentD2Collection, botID } = require('../config.json');
-const { setDivToggle, getDivToggle } = require('../helper.js');
+const { setDivToggle, getDivToggle, getPPToggle } = require('../helper.js');
 const { lightskyblue } = require("color-name");
 let ending = "";
 
