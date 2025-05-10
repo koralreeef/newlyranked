@@ -151,14 +151,37 @@ module.exports = {
         }
         for (score in scores) {
             const currentScore = scores[score]
+            const beatmapID = currentScore.beatmap.id
             let mods = "+NM";
             let hidden = false;
             if (currentScore.mods.includes("HR")) mods = "+HR"
             if (currentScore.mods.includes("DT")) mods = "+DT"
             if (currentScore.mods.includes("HD")) hidden = true;
 
-            const validMap = await aimLists.findOne({ where: { map_id: currentScore.beatmap.id } })
-            const beatmapID = currentScore.beatmap.id;
+            const validMaps = await aimLists.findAll({
+                where: { map_id: currentScore.beatmap.id }
+            })
+            //IS THIS N OR IS THIS DIVINE INTELLECT 
+            let collectionName = "";
+            let validMap;
+            if(validMaps.length > 0){
+                for(collection in validMaps){
+                    console.log("check check " + validMaps[collection].collection +"\nother collection check "+currentD2Collection)
+                    if(validMaps[collection].collection == currentD2Collection){
+                        collectionName = currentD2Collection;
+                        validMap = validMaps[collection]
+                    } 
+                    else if(validMaps[collection].collection == currentD1Collection){
+                        collectionName = currentD1Collection;
+                        validMap = validMaps[collection]
+                    } else {
+                        collectionName = validMaps[collection].collection
+                        validMap = validMaps[collection]
+                    }
+                }
+            }
+            //console.log(collectionName)
+            //console.log(validMaps)
             if (validMap) {
                 mapCount++;
                 await tools.download_beatmaps({
@@ -204,7 +227,7 @@ module.exports = {
                 } else {
                     await aimScores.create({
                         map_id: beatmapID,
-                        collection: validMap.collection,
+                        collection: collectionName,
                         index: validMap.id,
                         user_id: user.osu_id,
                         username: user.username,
@@ -217,7 +240,8 @@ module.exports = {
                         max_combo: maxAttrs.state.maxCombo,
                         date: currentScore.created_at,
                         hidden: hidden,
-                        is_current: 0
+                        is_current: 0,
+                        required_dt: validMap.required_dt
                     });
                 }
                 map.free();

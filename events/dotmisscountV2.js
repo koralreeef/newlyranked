@@ -21,7 +21,7 @@ async function misscountByDT(uID, mod, d) {
             if (!mapIDs.includes(scores[score].map_id)) {
                 mapIDs.push(scores[score].map_id)
                 unique.push(scores[score])
-                console.log(scores[score].map_id)
+                //console.log(scores[score].map_id)
             }
         }
         let processing = true
@@ -55,7 +55,7 @@ async function misscountByMod(uID, mod, d) {
             if (!mapIDs.includes(scores[score].map_id)) {
                 mapIDs.push(scores[score].map_id)
                 unique.push(scores[score])
-                console.log(scores[score].map_id)
+                //console.log(scores[score].map_id)
             }
         }
         let processing = true
@@ -75,12 +75,13 @@ async function misscountByMod(uID, mod, d) {
     }
 }
 
-async function buildEmbedByMod(data, mod, maps, uID, requiredDT) {
+async function buildEmbedByMod(data, mod, m, uID, requiredDT) {
+    const maps = m;
     let misscount = 0;
     let bool = false;
     let string = "";
     let leftovers = "no scores found";
-    if (data.maps == maps.length) {
+    if (data.maps == maps.length){
         string = "\n";
         const scores = data.scores
         for (score in scores) {
@@ -106,6 +107,7 @@ async function buildEmbedByMod(data, mod, maps, uID, requiredDT) {
                 ]]
             })
             if (current) {
+                console.log(current.mods)
                 if (leftovers === "no scores found") {
                     leftovers = ""
                 }
@@ -278,10 +280,14 @@ module.exports = {
             const hr = await misscountByMod(check.osu_id, "+HR", collectionName);
             const nm = await misscountByMod(check.osu_id, "+NM", collectionName);
             const dt = await misscountByDT(check.osu_id, "+DT", collectionName);
-            const maps = await aimLists.findAll({ where: { collection: collectionName }, order: [["map_id", "desc"]] })
+            const maps = await aimLists.findAll({ where: { collection: collectionName, required_dt: false }, order: [["map_id", "desc"]] })
+            const dtMaps = await aimLists.findAll({ where: { collection: collectionName, required_dt: true }, order: [["map_id", "desc"]] })
+            for(map in maps){
+                console.log(maps[map].title)
+            }
             const hrEmbed = await buildEmbedByMod(hr, "+HR", maps, check.osu_id, false);
             const nmEmbed = await buildEmbedByMod(nm, "+NM", maps, check.osu_id, false);
-            const dtEmbed = await buildEmbedByMod(dt, "+DT", maps, check.osu_id, true);
+            const dtEmbed = await buildEmbedByMod(dt, "+DT", dtMaps, check.osu_id, true);
             console.log("make")
             const total = await calcTotal(check.osu_id, collectionName)
             //console.log(hrEmbed)
@@ -311,7 +317,7 @@ module.exports = {
             let asterik = "";
             let description = "hr misscount: **" + hr.misscount + "**" + hrString
                     + "\n\nnm misscount: **" + nm.misscount + "**" + nmString + "\n\n total misscount: **" + total.total + asterik + " (" + total.nmMaps + " NM/" + total.hrMaps + " HR)**"
-            if(dtString.length > 0){
+            if(dtMaps.length > 0){
                 description = "hr misscount: **" + hr.misscount + "**" + hrString
                     + "\n\nnm misscount: **" + nm.misscount + "**" + nmString 
                     + "\n\ndt misscount: **" + dt.misscount + "**" + dtString 

@@ -47,7 +47,10 @@ module.exports = (sequelize, DataTypes) => {
 		},
 		required_dt: {
 			type: DataTypes.BOOLEAN,
-		}
+		},
+		past_season: {
+			type: DataTypes.INTEGER
+		},
 	}, {
 		timestamps: false,
 	});

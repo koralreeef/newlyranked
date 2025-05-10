@@ -8,10 +8,11 @@ const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 
 async function buildFull(map, ind, user, m) {
+  console.log(map.collection)
   const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "]"
   let mod = m;
   let scores = await aimScores.findAll({
-    where: { map_id: map.map_id },
+    where: { map_id: map.map_id, collection: map.collection },
     order: [
       ["misscount", "ASC"],
       ["date", "ASC"]
@@ -19,7 +20,7 @@ async function buildFull(map, ind, user, m) {
   })
   if (mod != "") {
     scores = await aimScores.findAll({
-      where: { map_id: map.map_id, mods: mod },
+      where: { map_id: map.map_id, mods: mod, collection: map.collection },
       order: [
         ["misscount", "ASC"],
         ["date", "ASC"]
@@ -136,7 +137,7 @@ async function buildEmbed(map, ind, maxIndex, user) {
   let limit = maxIndex + 1;
   const scores = await aimScores.findAll({
     limit: 15,
-    where: { map_id: map.map_id },
+    where: { map_id: map.map_id, collection: map.collection },
     order: [
       ["misscount", "ASC"],
       ["date", "ASC"]
@@ -317,7 +318,7 @@ module.exports = {
       aimList = await aimLists.findAll({
         where: {
           collection: {
-            [Op.like]: collectionName.toLowerCase()
+            [Op.like]: collectionName
           }
         },
         order: [

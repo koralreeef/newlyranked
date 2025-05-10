@@ -82,7 +82,7 @@ module.exports = {
         setBeatmapID(id[1]);
         }
         let beatmapID = getBeatmapID();
-        console.log(beatmapID);
+        //console.log(beatmapID);
         let self = false;
         if(msg === ".c") self = true; 
         if(regex.test(msg) || self) {

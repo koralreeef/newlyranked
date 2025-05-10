@@ -12,7 +12,8 @@ async function buildFull(map, ind, user, m) {
   const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "]"
   let mod = m;
   let scores = await aimScores.findAll({
-    where: { map_id: map.map_id },
+    //pass in collection name
+    where: { map_id: map.map_id, collection: map.collection },
     order: [
       ["misscount", "ASC"],
       ["date", "ASC"]
@@ -20,7 +21,7 @@ async function buildFull(map, ind, user, m) {
   })
   if(mod != ""){
     scores = await aimScores.findAll({
-      where: { map_id: map.map_id, mods: mod },
+      where: { map_id: map.map_id, mods: mod, collection: map.collection },
       order: [
         ["misscount", "ASC"],
         ["date", "ASC"]
@@ -46,8 +47,10 @@ async function buildFull(map, ind, user, m) {
       let index = Number(i) + 1
       if(current.hidden) hidden = " (HD)" 
       let date = Date.parse(current.date);
+      let season = "";
+      if(current.past_season) season = "**("+current.past_season+")**"
       let timestamp = Math.floor(date / 1000) //remove last subtraction after dst
-      userScore = ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R>\n **"
+      userScore = ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
         + current.accuracy + "%  • ** **" + current.combo + "x**/" + current.max_combo + " • " + score.toLocaleString() + "\n")
       userScores.push(userScore)
     }
@@ -68,13 +71,15 @@ async function buildFull(map, ind, user, m) {
       let index = Number(scor) + 1
       let date = Date.parse(scores[scor].date);
       let timestamp = Math.floor(date / 1000) //remove last subtraction after dst
+      let season = "";
+      if(current.past_season) season = "**("+current.past_season+")**"
       if (current.user_id == user) {
-        scoreString = scoreString + ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R>\n **"
+        scoreString = scoreString + ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
           + current.accuracy + "%  • ** **" + current.combo + "x**/" + current.max_combo + " • " + score.toLocaleString() + "\n")
-        selfScore = selfScore + ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R>\n **"
+        selfScore = selfScore + ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
           + current.accuracy + "%  • ** **" + current.combo + "x**/" + current.max_combo + " • " + score.toLocaleString() + "\n")
       } else {
-        scoreString = scoreString + ("**#" + index + "** **[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R>\n **"
+        scoreString = scoreString + ("**#" + index + "** **[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
           + current.accuracy + "%  • ** **" + current.combo + "x**/" + current.max_combo + " • " + score.toLocaleString() + "\n")
       }
       //i barely know how this is working jesus christ
@@ -140,7 +145,7 @@ async function buildEmbed(map, ind, maxIndex, user) {
   let limit = maxIndex + 1;
   const scores = await aimScores.findAll({
     limit: 15,
-    where: { map_id: map.map_id },
+    where: { map_id: map.map_id, collection: map.collection },
     order: [
       ["misscount", "ASC"],
       ["date", "ASC"]
@@ -158,14 +163,16 @@ async function buildEmbed(map, ind, maxIndex, user) {
       let index = Number(score) + 1
       let date = Date.parse(bro.date);
       let timestamp = Math.floor(date / 1000);
+      let season = "";
+      if(bro.past_season) season = "**("+bro.past_season+")**"
       if (bro.hidden) {
         hidden = " (HD)"
       }
       if (bro.user_id == user) {
-        scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")__** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R>\n **"
+        scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")__** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
           + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
       } else {
-        scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R>\n  **"
+        scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n  **"
           + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
       }
     }
@@ -356,11 +363,14 @@ module.exports = {
         //extra query :(((((((())))))))
         const unique = []
         if(magnifyUnfiltered.length > 0){
+          magnify.setDisabled(false)
           for(score in magnifyUnfiltered){
             if(!unique.includes(magnifyUnfiltered[score].user_id)){
               unique.push(magnifyUnfiltered[score].user_id)
             }
           }
+        } else {
+          magnify.setDisabled(true) 
         }
         let magnifyMapCount = unique.length
         let maxMagnifyIndex = Math.trunc((unique.length / 15))

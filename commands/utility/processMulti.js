@@ -133,7 +133,7 @@ module.exports = {
         });
         if (result.error != null) {
             console.log(result.error);
-            return await interaction.reply({ content: 'couldnt find match, double check your multi id', ephemeral: true });
+            return await interaction.followUp({ content: 'couldnt find match, double check your multi id', ephemeral: true });
         };
 
         const eventArray = await v2.matches.details({
@@ -164,9 +164,27 @@ module.exports = {
             const newMap = await createLeaderboard(unique, jsAPI, beatmap, user.username)
             console.log(newMap.added)
             if((newMap.added).length > 0) newMaps.push(newMap.added) 
-            const beatmapData = await aimLists.findOne({ where: { map_id: beatmap } })
-            const found = await aimScores.findOne({ where: { map_id: beatmap } }) ?? newMap.creator;
-            if (beatmapData) {
+            const validMaps = await aimLists.findAll({
+                where: { map_id: beatmap }
+            })
+            let collectionName;
+            let beatmapData;
+            if (validMaps.length > 0) {
+                for(collection in validMaps){
+                    console.log("check check " + validMaps[collection].collection +"\nother collection check "+currentD2Collection)
+                    if(validMaps[collection].collection == currentD2Collection){
+                        collectionName = currentD2Collection;
+                        beatmapData = validMaps[collection]
+                    } 
+                    else if(validMaps[collection].collection == currentD1Collection){
+                        collectionName = currentD1Collection;
+                        beatmapData = validMaps[collection]
+                    } else {
+                        collectionName = validMaps[collection].collection
+                        beatmapData = validMaps[collection]
+                    }
+                }
+
                 await tools.download_beatmaps({
                     type: 'difficulty',
                     host: 'osu',
@@ -220,7 +238,7 @@ module.exports = {
                         } else {
                             await aimScores.create({
                                 map_id: beatmap,
-                                collection: found.collection,
+                                collection: collectionName,
                                 index: beatmapData.id,
                                 user_id: user.osu_id,
                                 username: user.username,
@@ -233,7 +251,8 @@ module.exports = {
                                 max_combo: maxAttrs.state.maxCombo,
                                 date: currentScore.created_at,
                                 hidden: hidden,
-                                is_current: 0
+                                is_current: 0,
+                                required_dt: beatmapData.required_dt
                             });
                         }
                         //console.log(user.username+": "+currentScore.score+" / mods: "+currentScore.mods+" / pp: "+

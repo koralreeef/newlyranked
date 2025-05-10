@@ -44,6 +44,9 @@ async function buildEmbedByMod(data, mod, maps, uID) {
     let bool = false;
     let string = "";
     let leftovers = "no scores found";
+    if(mod.includes("DT")){
+        
+    }
     if (data.maps == maps.length) {
         string = "\n";
         const scores = data.scores
