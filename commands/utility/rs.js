@@ -1,6 +1,6 @@
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, hundoRole } = require('../../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole } = require('../../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
@@ -16,7 +16,7 @@ async function createLeaderboard(api, id, user) {
     const unique = []
     const unfiltered = await aimLists.findAll()
     for (entry in unfiltered) {
-        if (!unique.includes(unfiltered[entry].creatorID)){ 
+        if (!unique.includes(unfiltered[entry].creatorID)) {
             unique.push(unfiltered[entry].creatorID)
         }
     }
@@ -47,7 +47,8 @@ async function createLeaderboard(api, id, user) {
                 artist: beatmap.beatmapset.artist,
                 creator: mapper.username,
                 creatorID: beatmap.beatmapset.user_id,
-                is_current: 0
+                is_current: 0,
+                required_dt: 0
             })
             console.log("added " + beatmap.beatmapset.title)
             added = true
@@ -279,7 +280,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     if (topPlayIndex == 1) {
         embedColor = white;
     }
-    if (modString.includes("HR")){
+    if (modString.includes("HR")) {
         leaderboardMods = "+HR"
     } else {
         leaderboardMods = "+NM"
@@ -324,15 +325,15 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     let collectionString = "";
     let timestamp = Math.floor(date / 1000); //remove last subtraction after dst
 
-    const aimMap = await aimLists.findOne({where: {map_id: beatmap.id}})
-    
-    if(aimMap){
-        const maps = await aimLists.findAll({where: {collection: aimMap.collection}, order: [["map_id", "DESC"]]})
+    const aimMap = await aimLists.findOne({ where: { map_id: beatmap.id } })
+
+    if (aimMap) {
+        const maps = await aimLists.findAll({ where: { collection: aimMap.collection }, order: [["map_id", "DESC"]] })
         let checking = true;
         let i = 0;
-        while(checking){
-            const found = await aimLists.findOne({where: {map_id: beatmap.id}})
-            if(found.map_id === maps[i].map_id){
+        while (checking) {
+            const found = await aimLists.findOne({ where: { map_id: beatmap.id } })
+            if (found.map_id === maps[i].map_id) {
                 collectionIndex = Number(i) + 1;
                 checking = false;
             }
@@ -347,7 +348,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
                 let rank = 0;
                 const scores = await aimScores.findAll({ where: { map_id: beatmap.id, mods: leaderboardMods }, order: [["misscount", "ASC"]] })
                 const found = await aimScores.findOne({ where: { map_id: beatmap.id, mods: leaderboardMods, user_id: user.id } })
-                if(found){
+                if (found) {
                     while (checking) {
                         if (found.user_id == scores[i].user_id) {
                             rank = Number(i) + 1;
@@ -367,8 +368,8 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         }
     }
 
-    if(collectionLength > 0){
-        collectionString = " map "+collectionIndex+"/"+collectionLength+" from "+collectionName
+    if (collectionLength > 0) {
+        collectionString = " map " + collectionIndex + "/" + collectionLength + " from " + collectionName
     }
 
     if (blob.fcPP < blob.currPP)
@@ -398,7 +399,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         )
         .setColor(embedColor)
         .setFooter({
-            text: collectionString + "\n"+ beatmap.status + " mapset by " + beatmapset.creator,
+            text: collectionString + "\n" + beatmap.status + " mapset by " + beatmapset.creator,
             iconURL: "https://a.ppy.sh/" + beatmapset.user_id
         });
     return rsEmbed;
@@ -420,7 +421,7 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
     if (modArray.includes("HR")) {
         mods = mods + "HR"
     }
-    if(mods === "+"){
+    if (mods === "+") {
         mods = mods + "NM";
     }
     if (lazer) {
@@ -449,14 +450,14 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
     let collectionName = "";
     let validMap;
     let dtCheck;
-    if(validMaps.length > 0){
-        for(collection in validMaps){
-            console.log("check check " + validMaps[collection].collection +"\nother collection check "+currentD2Collection)
-            if(validMaps[collection].collection == currentD2Collection){
+    if (validMaps.length > 0) {
+        for (collection in validMaps) {
+            console.log("check check " + validMaps[collection].collection + "\nother collection check " + currentD2Collection)
+            if (validMaps[collection].collection == currentD2Collection) {
                 collectionName = currentD2Collection;
                 validMap = validMaps[collection]
-            } 
-            else if(validMaps[collection].collection == currentD1Collection){
+            }
+            else if (validMaps[collection].collection == currentD1Collection) {
                 collectionName = currentD1Collection;
                 validMap = validMaps[collection]
             } else {
@@ -471,7 +472,7 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, mods: mods },
     });
-    console.log("check check" + validMap +"\ndt check "+dtCheck)
+    console.log("check check" + validMap + "\ndt check " + dtCheck)
     //check for time later
     //add patch from test2.js for storing multiple scores
     if (validMap && score.passed && dtCheck) {
@@ -480,6 +481,7 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
         });
         if (aimScore) {
             console.log("existing score found")
+            const same = await aimScores.findOne({ where: {map_id: score.beatmap.id, user_id: score.user_id, mods: mods, pp: blob.currPP}})
             if (score.statistics.count_miss < aimScore.misscount) {
                 const diff = score.statistics.count_miss - aimScore.misscount;
                 const oldMisscount = aimScore.misscount;
@@ -517,6 +519,29 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
                 const string = "improved misscount by **" + Math.abs(diff) + "**! (" + oldMisscount + " -> " + score.statistics.count_miss +
                     ")\nnew leaderboard rank: **#" + rank + "**/" + scores.length
                 return string
+            } else if (blob.currPP > aimScore.pp && !same) {
+                //YOLO
+                const diff = blob.currPP - aimScore.pp;
+                await aimScores.create({
+                    map_id: score.beatmap.id,
+                    collection: validMap.collection,
+                    index: validMap.id,
+                    user_id: score.user_id,
+                    username: score.user.username,
+                    mods: mods,
+                    pp: blob.currPP,
+                    score: score.score,
+                    accuracy: accuracy,
+                    misscount: score.statistics.count_miss,
+                    combo: score.max_combo,
+                    max_combo: blob.stats.difficulty.maxCombo,
+                    date: score.created_at,
+                    hidden: hidden,
+                    is_current: 0,
+                    required_dt: validMap.required_dt
+                });
+                const string = "gained **" + Math.abs(diff).toFixed(2) + "** pp! (" + aimScore.pp + " -> " + blob.currPP + ")"
+                return string
             }
             return ""
         } else {
@@ -543,7 +568,7 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
                 max_combo: blob.stats.difficulty.maxCombo,
                 date: score.created_at,
                 hidden: hidden,
-                is_current: is_current,
+                is_current: 0,
                 required_dt: validMap.required_dt
             });
             const scores = await aimScores.findAll({
@@ -558,12 +583,12 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
             //console.log("asdad" + preEntry)
             //console.log("asd" + complete)
             let newmap = "";
-            if(added) {
+            if (added) {
                 newmap = " and map"
             }
             const mod = mods.substring(1)
-            let congrats = "logged new " + mod + " score"+newmap+" into " + validMap.collection + "!"
-           if (preEntry == currentCollection - 1 && complete == currentCollection) {
+            let congrats = "logged new " + mod + " score" + newmap + " into " + validMap.collection + "!"
+            if ((collectionName == currentD1Collection || collectionName == currentD2Collection) && preEntry == currentCollection - 1 && complete == currentCollection) {
                 const mod = mods.substring(1)
                 console.log("applied role")
                 congrats = "🎉 congrats on " + mod + " completion for " + validMap.collection + "! 🎉"
@@ -573,8 +598,8 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
                     if (mod == "NM") await interaction.member.roles.add(nmRole).catch(console.error);
                     if (mod == "HR") await interaction.member.roles.add(hrRole).catch(console.error);
                 } else if (collectionName == currentD2Collection) {
-                    if (mod == "NM") await interaction.member.roles.add("1366104494072401980").catch(console.error);
-                    if (mod == "HR") await interaction.member.roles.add("1366104856502468750").catch(console.error);
+                    if (mod == "NM") await interaction.member.roles.add(nmRole2).catch(console.error);
+                    if (mod == "HR") await interaction.member.roles.add(nmRole2).catch(console.error);
                 }
                 //fix this
                 if (await interaction.member.roles.cache.has(nmRole) && await interaction.member.roles.cache.has(hrRole)) {
@@ -586,14 +611,14 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
             let i = 0;
             let rank = 0;
             const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, date: score.created_at }, order: [["misscount", "ASC"]] })
-            while (checking) {     
+            while (checking) {
                 if (scores.length == 1) {
                     rank = 1;
                     checking = false;
                 }
-                 //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
+                //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
                 else if (found.misscount <= scores[i].misscount) {
-                    const sameCount = await aimScores.count({ where: { map_id: score.beatmap.id, collection: collectionName, misscount: found.misscount }})
+                    const sameCount = await aimScores.count({ where: { map_id: score.beatmap.id, collection: collectionName, misscount: found.misscount } })
                     rank = Number(i) + sameCount;
                     checking = false;
                 }
@@ -609,209 +634,209 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
 }
 
 module.exports = {
-	data: new SlashCommandBuilder()
-		.setName('rs')
-		.setDescription('submits scores to the bot privately')
+    data: new SlashCommandBuilder()
+        .setName('rs')
+        .setDescription('submits scores to the bot privately')
         .addBooleanOption(option =>
-			option.setName('pass')
-				.setDescription('if you want to filter for passes only'))
+            option.setName('pass')
+                .setDescription('if you want to filter for passes only'))
         .addNumberOption(option =>
             option.setName('offset')
                 .setDescription('if you want to look for the not most recent score')),
 
-	async execute(interaction) {
-            await auth.login({
-                type: 'v2',
-                client_id: clientIDv2,
-                client_secret: clientSecret,
-                cachedTokenPath: './test.json' // path to the file your auth token will be saved (to prevent osu!api spam)
-            });
-            await interaction.deferReply();
-            let api = new Client(await getAccessToken());
-            let usr = await osuUsers.findOne({ where: { user_id: interaction.user.id } });
-            let p = true;
-            let offset = interaction.options.getNumber('offset') ?? 1;
-            if(interaction.options.getBoolean('pass')) p = false
-            let user;
-            try {
-                user = await api.users.getUser(usr.username, 'osu', 'username', {
-                    urlParams: {
-                        mode: 'osu'
-                    }
-                });
-            } catch (err) {
-                return await interaction.followUp({ content: "couldnt find user", ephemeral: true });
-            }
-            let scores;
-            try {
-                scores = await api.users.getUserScores(user.id, 'recent', {
-                    query: {
-                        mode: 'osu',
-                        offset: offset - 1,
-                        limit: 1,
-                        include_fails: p
-                    }
-                });
-            } catch (err) {
-                return interaction.followUp({content: "no score found or something went wrong (ping koral)", ephemeral: true });
-            }
-            if (scores.length > 0) {
-                let score = scores[0];
-                try {
-                    let lazer = true;
-                    //console.log(score.type);
-                    let modString = "";
-                    for (let i = 0; i < (score.mods).length; i++) {
-                        modString = modString + score.mods[i];
-                    }
-                    if (score.type != "solo_score") {
-                        lazer = false;
-                        modString = modString + "CL";
-                    }
-
-                    const result = await tools.download_beatmaps({
-                        type: 'difficulty',
-                        host: 'osu',
-                        id: score.beatmap.id,
-                        file_path: "./maps/" + score.beatmap.id + ".osu"
-                    });
-
-                    //console.log(result);
-                    setBeatmapID(score.beatmap.id);
-                    const bytes = fs.readFileSync("./maps/" + score.beatmap.id + ".osu");
-                    let map = new rosu.Beatmap(bytes);
-                    let ppData = {};
-                    let total = score.statistics.count_100 + score.statistics.count_300 + score.statistics.count_50 + score.statistics.count_miss;
-                    if (lazer) {
-                        ppData = await calcLazerPP(score, map, total, modString)
-                    } else {
-                        ppData = await calcPP(score, map, total, modString)
-                    }
-
-                    console.log(score);
-                    //console.log(ppData);   
-                    // Free the beatmap manually to avoid risking memory leakage.
-                    map.free();
-                    fs.unlink("./maps/" + score.beatmap.id + ".osu", function (err) {
-                        console.log(err);
-                    });
-
-                    const beatmap = score.beatmap;
-                    const beatmapset = score.beatmapset;
-                    const user = score.user;
-                    const clockRate = ppData.clockRate;
-                    const accuracy = ppData.accuracy;
-                    const cs = ppData.cs;
-                    let global = [];
-                    let foundPP = false;
-                    let foundTop = false;
-                    let foundModTop = false;
-                    let globalTopIndex = 0;
-                    let modIndex = 0;
-                    const mods = ppData.lazerMods ?? modString;
-                    const best = await v2.scores.list({
-                        type: 'user_best',
-                        limit: 100,
-                        beatmap_id: score.beatmap.id,
-                        user_id: user.id,
-                    });
-                    if (beatmap.status != "graveyard" && beatmap.status != "wip" && beatmap.status != "pending") {
-                        const res = await axios.get("https://osu.ppy.sh/api/get_scores?k=" + AccessToken + "&b=" + score.beatmap.id + "&limit=50");
-                        global = res.data;
-                        global.reverse();
-                        //console.log(res.data)
-                        if (score.score == global[global.length - 1].score) {
-                            //console.log(score.score);
-                            globalTopIndex = 1;
-                        }
-                        else if (score.score < global[0].score) {
-                            console.log(score.score + " < " + global[0].score);
-                            globalTopIndex = 0;
-                        } else {
-                            for (let i in global) {
-                                if (global[i].score > score.score && foundTop == false) {
-                                    globalTopIndex = Math.abs(Number(i) - global.length - 1);
-                                    //console.log(global[i].score+" "+score.score);
-                                    foundTop = true;
-                                }
-                            }
-                        }
-
-                        let enumSum = 0;
-
-                        //there has to be a better way
-                        if (mods.includes("HR"))
-                            enumSum = enumSum + 16;
-                        if (mods.includes("HD"))
-                            enumSum = enumSum + 8;
-                        if (mods.includes("DT"))
-                            enumSum = enumSum + 64;
-                        if (mods.includes("NF"))
-                            enumSum = enumSum + 1;
-                        if (mods.includes("EZ"))
-                            enumSum = enumSum + 2;
-                        if (mods.includes("SD"))
-                            enumSum = enumSum + 32;
-
-                        const res2 = await axios.get("https://osu.ppy.sh/api/get_scores?k=" + AccessToken + "&b=" + beatmap.id + "&mods=" + enumSum + "&limit=100");
-                        const modscores = res2.data;
-                        //console.log(modscores);
-                        //CATCHING SD LEADERBOARDS WOW
-                        if (modscores.length > 0) {
-                            modscores.reverse();
-                            if (score.score == modscores[modscores.length - 1].score) {
-                                //console.log(score.score);
-                                modIndex = 1;
-                            }
-                            else if (score.score < modscores[0].score) {
-                                console.log(score.score + " < " + modscores[0].score);
-                                modIndex = 0;
-                            } else {
-                                for (let i in modscores) {
-                                    if (modscores[i].score > score.score && foundModTop == false) {
-                                        modIndex = Math.abs(Number(i) - modscores.length - 1);
-                                        //console.log(global[i].score+" "+score.score);
-                                        foundModTop = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    let newScorePP = ppData.currPP;
-                    let topPlayIndex = 0;
-                    best.reverse();
-                    console.log(best[best.length - 1].pp + " || " + newScorePP)
-                    if (best[0].pp < newScorePP) {
-                        if (newScorePP == Number((best[best.length - 1].pp).toFixed(2)) && foundPP == false) {
-                            topPlayIndex = 1;
-                            foundPP = true;
-                        } else {
-                            for (let i in best) {
-                                if (best[i].pp > newScorePP && foundPP == false) {
-                                    //so bad
-                                    topPlayIndex = Math.abs(Number(i) - 101);
-                                    console.log(topPlayIndex);
-                                    foundPP = true;
-                                }
-                            }
-                        }
-                    }
-
-                    let percentage = ppData.stats.state.n300;
-                    percentage = (total / percentage) * 100
-                    let progress = "@" + Math.round(percentage) + "%";
-                    if (percentage == 100) progress = "";
-                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, interaction, lazer, ppData.details, api)
-                    const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
-                    interaction.followUp({ content: leaderboardString, embeds: [rsEmbed], ephemeral: true });
-                } catch (err) {
-                    console.log(err);
-                    await interaction.followUp({ content: "no scores set within 24 hours or user hasnt used /osuset", ephemeral: true });
+    async execute(interaction) {
+        await auth.login({
+            type: 'v2',
+            client_id: clientIDv2,
+            client_secret: clientSecret,
+            cachedTokenPath: './test.json' // path to the file your auth token will be saved (to prevent osu!api spam)
+        });
+        await interaction.deferReply();
+        let api = new Client(await getAccessToken());
+        let usr = await osuUsers.findOne({ where: { user_id: interaction.user.id } });
+        let p = true;
+        let offset = interaction.options.getNumber('offset') ?? 1;
+        if (interaction.options.getBoolean('pass')) p = false
+        let user;
+        try {
+            user = await api.users.getUser(usr.username, 'osu', 'username', {
+                urlParams: {
+                    mode: 'osu'
                 }
+            });
+        } catch (err) {
+            return await interaction.followUp({ content: "couldnt find user", ephemeral: true });
+        }
+        let scores;
+        try {
+            scores = await api.users.getUserScores(user.id, 'recent', {
+                query: {
+                    mode: 'osu',
+                    offset: offset - 1,
+                    limit: 1,
+                    include_fails: p
+                }
+            });
+        } catch (err) {
+            return interaction.followUp({ content: "no score found or something went wrong (ping koral)", ephemeral: true });
+        }
+        if (scores.length > 0) {
+            let score = scores[0];
+            try {
+                let lazer = true;
+                //console.log(score.type);
+                let modString = "";
+                for (let i = 0; i < (score.mods).length; i++) {
+                    modString = modString + score.mods[i];
+                }
+                if (score.type != "solo_score") {
+                    lazer = false;
+                    modString = modString + "CL";
+                }
+
+                const result = await tools.download_beatmaps({
+                    type: 'difficulty',
+                    host: 'osu',
+                    id: score.beatmap.id,
+                    file_path: "./maps/" + score.beatmap.id + ".osu"
+                });
+
+                //console.log(result);
+                setBeatmapID(score.beatmap.id);
+                const bytes = fs.readFileSync("./maps/" + score.beatmap.id + ".osu");
+                let map = new rosu.Beatmap(bytes);
+                let ppData = {};
+                let total = score.statistics.count_100 + score.statistics.count_300 + score.statistics.count_50 + score.statistics.count_miss;
+                if (lazer) {
+                    ppData = await calcLazerPP(score, map, total, modString)
+                } else {
+                    ppData = await calcPP(score, map, total, modString)
+                }
+
+                console.log(score);
+                //console.log(ppData);   
+                // Free the beatmap manually to avoid risking memory leakage.
+                map.free();
+                fs.unlink("./maps/" + score.beatmap.id + ".osu", function (err) {
+                    console.log(err);
+                });
+
+                const beatmap = score.beatmap;
+                const beatmapset = score.beatmapset;
+                const user = score.user;
+                const clockRate = ppData.clockRate;
+                const accuracy = ppData.accuracy;
+                const cs = ppData.cs;
+                let global = [];
+                let foundPP = false;
+                let foundTop = false;
+                let foundModTop = false;
+                let globalTopIndex = 0;
+                let modIndex = 0;
+                const mods = ppData.lazerMods ?? modString;
+                const best = await v2.scores.list({
+                    type: 'user_best',
+                    limit: 100,
+                    beatmap_id: score.beatmap.id,
+                    user_id: user.id,
+                });
+                if (beatmap.status != "graveyard" && beatmap.status != "wip" && beatmap.status != "pending") {
+                    const res = await axios.get("https://osu.ppy.sh/api/get_scores?k=" + AccessToken + "&b=" + score.beatmap.id + "&limit=50");
+                    global = res.data;
+                    global.reverse();
+                    //console.log(res.data)
+                    if (score.score == global[global.length - 1].score) {
+                        //console.log(score.score);
+                        globalTopIndex = 1;
+                    }
+                    else if (score.score < global[0].score) {
+                        console.log(score.score + " < " + global[0].score);
+                        globalTopIndex = 0;
+                    } else {
+                        for (let i in global) {
+                            if (global[i].score > score.score && foundTop == false) {
+                                globalTopIndex = Math.abs(Number(i) - global.length - 1);
+                                //console.log(global[i].score+" "+score.score);
+                                foundTop = true;
+                            }
+                        }
+                    }
+
+                    let enumSum = 0;
+
+                    //there has to be a better way
+                    if (mods.includes("HR"))
+                        enumSum = enumSum + 16;
+                    if (mods.includes("HD"))
+                        enumSum = enumSum + 8;
+                    if (mods.includes("DT"))
+                        enumSum = enumSum + 64;
+                    if (mods.includes("NF"))
+                        enumSum = enumSum + 1;
+                    if (mods.includes("EZ"))
+                        enumSum = enumSum + 2;
+                    if (mods.includes("SD"))
+                        enumSum = enumSum + 32;
+
+                    const res2 = await axios.get("https://osu.ppy.sh/api/get_scores?k=" + AccessToken + "&b=" + beatmap.id + "&mods=" + enumSum + "&limit=100");
+                    const modscores = res2.data;
+                    //console.log(modscores);
+                    //CATCHING SD LEADERBOARDS WOW
+                    if (modscores.length > 0) {
+                        modscores.reverse();
+                        if (score.score == modscores[modscores.length - 1].score) {
+                            //console.log(score.score);
+                            modIndex = 1;
+                        }
+                        else if (score.score < modscores[0].score) {
+                            console.log(score.score + " < " + modscores[0].score);
+                            modIndex = 0;
+                        } else {
+                            for (let i in modscores) {
+                                if (modscores[i].score > score.score && foundModTop == false) {
+                                    modIndex = Math.abs(Number(i) - modscores.length - 1);
+                                    //console.log(global[i].score+" "+score.score);
+                                    foundModTop = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                let newScorePP = ppData.currPP;
+                let topPlayIndex = 0;
+                best.reverse();
+                console.log(best[best.length - 1].pp + " || " + newScorePP)
+                if (best[0].pp < newScorePP) {
+                    if (newScorePP == Number((best[best.length - 1].pp).toFixed(2)) && foundPP == false) {
+                        topPlayIndex = 1;
+                        foundPP = true;
+                    } else {
+                        for (let i in best) {
+                            if (best[i].pp > newScorePP && foundPP == false) {
+                                //so bad
+                                topPlayIndex = Math.abs(Number(i) - 101);
+                                console.log(topPlayIndex);
+                                foundPP = true;
+                            }
+                        }
+                    }
+                }
+
+                let percentage = ppData.stats.state.n300;
+                percentage = (total / percentage) * 100
+                let progress = "@" + Math.round(percentage) + "%";
+                if (percentage == 100) progress = "";
+                const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, interaction, lazer, ppData.details, api)
+                const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
+                interaction.followUp({ content: leaderboardString, embeds: [rsEmbed], ephemeral: true });
+            } catch (err) {
+                console.log(err);
+                await interaction.followUp({ content: "no scores set within 24 hours or user hasnt used /osuset", ephemeral: true });
             }
-            else {
-                await interaction.followUp({ content: "no scores set within 24 hours", ephemeral: true });
-            }
+        }
+        else {
+            await interaction.followUp({ content: "no scores set within 24 hours", ephemeral: true });
+        }
     }
 }
 

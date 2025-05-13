@@ -36,12 +36,12 @@ async function buildEmbed(toggle) {
     }
   }
   //console.log(mapIDs)
-  ending = "season 0 ends <t:1747094580:R>"
+  ending = "season 1 ends <t:1749859200:R>"
   const scoreEmbed = new EmbedBuilder()
     .setAuthor({ name: "Current collection: " + collectionName })
     .setDescription(mapArray + "\nraw map IDs below; **click the top right of the window to copy the list**``` " + mapIDs + "```")
     .setColor(lightskyblue)
-    .setFooter({ text: "season theme: sped up songs" });
+    .setFooter({ text: "season theme: whitecat 2020 yt" });
   //console.log(scoreEmbed)
   return scoreEmbed;
 }

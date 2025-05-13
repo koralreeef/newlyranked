@@ -1,9 +1,14 @@
 const { Events } = require('discord.js');
 const { PresenceUpdateStatus } = require('discord.js');
+const { currentD1Collection, currentD2Collection } = require('../config.json');
 const { ActivityType } = require('discord.js');
 const { client_cred } = require('../helper.js');
+const { osuUsers, aimLists, aimScores } = require('../db/dbObjects.js');
 const { CronJob } = require ('cron');
 const fs = require("fs");
+
+const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
 
 setInterval(async () => {
 	await client_cred();
@@ -39,7 +44,12 @@ module.exports = {
 		console.log("new token set!");
 		const scheduleExpression = '0 */24 * * *'; // Run once every eight hours in prod
 		//const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
-
+		/*
+		const oldMaps = await aimLists.findAll({ where: { [Op.or]: [{collection: currentD1Collection, collection: currentD2Collection}]}})
+		for(maps in oldMaps){
+			console.log(oldMaps.title)
+		}
+		*/
 		const job = new CronJob(scheduleExpression, copyDB); // change to scheduleExpressionMinute for testing
 
 		job.start();

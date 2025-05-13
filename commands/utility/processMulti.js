@@ -43,10 +43,11 @@ async function createLeaderboard(mappers, api, id, user) {
                 artist: beatmap.beatmapset.artist,
                 creator: mapper.username,
                 creatorID: beatmap.beatmapset.user_id,
-                is_current: 0
+                is_current: 0,
+                required_dt: 0,
             })
             console.log("added " + beatmap.beatmapset.title)
-            added = beatmap.beatmapset.artist+" - "+beatmap.beatmapset.title+" ["+beatmap.version+"]"
+            added = beatmap.beatmapset.artist + " - " + beatmap.beatmapset.title + " [" + beatmap.version + "]"
         }
     } else {
         console.log(validMap.title + " already exists")
@@ -59,11 +60,11 @@ async function createLeaderboard(mappers, api, id, user) {
 
 function arrayToString(array) {
     let string = "";
-    for(index in array){
-        if(index == array.length - 1){ 
+    for (index in array) {
+        if (index == array.length - 1) {
             string = string + array[index]
         } else {
-            string = string + array[index] +", "   
+            string = string + array[index] + ", "
         }
     }
     return string
@@ -71,11 +72,11 @@ function arrayToString(array) {
 
 function arrayToString2(array) {
     let string = "";
-    for(index in array){
-        if(index == array.length - 1){ 
+    for (index in array) {
+        if (index == array.length - 1) {
             string = string + array[index]
         } else {
-            string = string + array[index] +"\n"   
+            string = string + array[index] + "\n"
         }
     }
     return string
@@ -106,12 +107,12 @@ module.exports = {
         const url = new URL(
             "https://osu.ppy.sh/oauth/token"
         );
-    
+
         const headers = {
             "Accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded",
         };
-    
+
         let body = "client_id=" + clientIDv2 + "&client_secret=" + clientSecret + "&grant_type=client_credentials&scope=public";
         const response = await fetch(url, {
             method: "POST",
@@ -150,7 +151,7 @@ module.exports = {
         const unique = []
         const unfiltered = await aimLists.findAll()
         for (entry in unfiltered) {
-            if (!unique.includes(unfiltered[entry].creatorID)){ 
+            if (!unique.includes(unfiltered[entry].creatorID)) {
                 unique.push(unfiltered[entry].creatorID)
             }
         }
@@ -158,25 +159,25 @@ module.exports = {
         await sleep(1_000)
         //console.log(unique)
         const newMaps = [];
-        for (maps in matchArray) {  
+        for (maps in matchArray) {
             const gameScores = matchArray[maps].game.scores;
             const beatmap = matchArray[maps].game.beatmap_id;
             const newMap = await createLeaderboard(unique, jsAPI, beatmap, user.username)
             console.log(newMap.added)
-            if((newMap.added).length > 0) newMaps.push(newMap.added) 
+            if ((newMap.added).length > 0) newMaps.push(newMap.added)
             const validMaps = await aimLists.findAll({
                 where: { map_id: beatmap }
             })
             let collectionName;
             let beatmapData;
             if (validMaps.length > 0) {
-                for(collection in validMaps){
-                    console.log("check check " + validMaps[collection].collection +"\nother collection check "+currentD2Collection)
-                    if(validMaps[collection].collection == currentD2Collection){
+                for (collection in validMaps) {
+                    console.log("check check " + validMaps[collection].collection + "\nother collection check " + currentD2Collection)
+                    if (validMaps[collection].collection == currentD2Collection) {
                         collectionName = currentD2Collection;
                         beatmapData = validMaps[collection]
-                    } 
-                    else if(validMaps[collection].collection == currentD1Collection){
+                    }
+                    else if (validMaps[collection].collection == currentD1Collection) {
                         collectionName = currentD1Collection;
                         beatmapData = validMaps[collection]
                     } else {
@@ -191,21 +192,21 @@ module.exports = {
                     id: beatmap,
                     file_path: "./maps" + epoch + "/" + beatmap + ".osu"
                 });
-    
+
                 const bytes = fs.readFileSync("./maps" + epoch + "/" + beatmap + ".osu");
                 const map = new rosu.Beatmap(bytes);
-                console.log("map: " + beatmapData.artist + " - " + beatmapData.title + " ["+beatmapData.difficulty+"]"
+                console.log("map: " + beatmapData.artist + " - " + beatmapData.title + " [" + beatmapData.difficulty + "]"
                 )
-                if(!mapList.includes(beatmapData.artist + " - " + beatmapData.title + " ["+beatmapData.difficulty+"]")) {
-                    mapList.push(beatmapData.artist + " - " + beatmapData.title + " ["+beatmapData.difficulty+"]")
+                if (!mapList.includes(beatmapData.artist + " - " + beatmapData.title + " [" + beatmapData.difficulty + "]")) {
+                    mapList.push(beatmapData.artist + " - " + beatmapData.title + " [" + beatmapData.difficulty + "]")
                     mapCount++;
                 }
                 for (score in gameScores) {
                     const currentScore = gameScores[score]
                     const user = await osuUsers.findOne({ where: { osu_id: currentScore.user_id } })
                     if (currentScore.rank != "F" && user) {
-                        if(!collections.includes(beatmapData.collection)) collections.push(beatmapData.collection)
-                        if(!players.includes(user.username)) players.push(user.username)
+                        if (!collections.includes(beatmapData.collection)) collections.push(beatmapData.collection)
+                        if (!players.includes(user.username)) players.push(user.username)
                         let mods = "+NM";
                         let hidden = false;
                         if (currentScore.mods.includes("HR")) mods = "+HR"
@@ -223,6 +224,7 @@ module.exports = {
                         }).calculate(maxAttrs);
                         let accuracy = (currentScore.accuracy * 100).toFixed(2)
                         if (aimScore) {
+                            const same = await aimScores.findOne({ where: {map_id: beatmap, user_id: currentScore.user_id, mods: mods, pp: (currAttrs.pp).toFixed(2)}})
                             if (currentScore.statistics.count_miss < aimScore.misscount) {
                                 aimScore.misscount = currentScore.statistics.count_miss;
                                 aimScore.score = currentScore.score;
@@ -230,10 +232,29 @@ module.exports = {
                                 aimScore.accuracy = accuracy;
                                 aimScore.combo = currentScore.max_combo;
                                 aimScore.date = currentScore.created_at;
-                                aimScore.max_combo = found.max_combo,
                                 aimScore.hidden = hidden;
                                 console.log("updating misscount...")
                                 aimScore.save();
+                            } else if (currAttrs.pp > aimScore.pp && !same) {
+                                await aimScores.create({
+                                    map_id: beatmap,
+                                    collection: collectionName,
+                                    index: beatmapData.id,
+                                    user_id: user.osu_id,
+                                    username: user.username,
+                                    mods: mods,
+                                    pp: (currAttrs.pp).toFixed(2),
+                                    score: currentScore.score,
+                                    accuracy: accuracy,
+                                    misscount: currentScore.statistics.count_miss,
+                                    combo: currentScore.max_combo,
+                                    max_combo: maxAttrs.state.maxCombo,
+                                    date: currentScore.created_at,
+                                    hidden: hidden,
+                                    is_current: 0,
+                                    required_dt: beatmapData.required_dt
+                                });
+                                console.log("adding new local...")
                             }
                         } else {
                             await aimScores.create({
@@ -277,11 +298,11 @@ module.exports = {
         const newMapsString = arrayToString2(newMaps);
         let finalMaps = "";
         console.log(newMaps)
-        if(newMapsString.length > 0){
-            finalMaps = "new maps added: "+newMapsString
+        if (newMapsString.length > 0) {
+            finalMaps = "new maps added: " + newMapsString
         }
         const collectionsString = arrayToString(collections);
-        return await interaction.followUp({ content: "found "+mapCount+" maps in lobby https://osu.ppy.sh/community/matches/"+match_id+" \nplayers: "+playerString+"\ncollections: "+collectionsString+"\n"+finalMaps });
+        return await interaction.followUp({ content: "found " + mapCount + " maps in lobby https://osu.ppy.sh/community/matches/" + match_id + " \nplayers: " + playerString + "\ncollections: " + collectionsString + "\n" + finalMaps });
     },
 };
 

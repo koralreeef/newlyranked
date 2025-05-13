@@ -1,6 +1,6 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, hundoRole } = require('../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole } = require('../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
@@ -50,7 +50,8 @@ async function createLeaderboard(api, id, user) {
                 artist: beatmap.beatmapset.artist,
                 creator: mapper.username,
                 creatorID: beatmap.beatmapset.user_id,
-                is_current: 0
+                is_current: 0,
+                required_dt: 0
             })
             console.log("added " + beatmap.beatmapset.title)
             added = true
@@ -486,6 +487,7 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
         });
         if (aimScore) {
             console.log("existing score found")
+            const same = await aimScores.findOne({ where: {map_id: score.beatmap.id, user_id: score.user_id, mods: mods, pp: blob.currPP}})
             if (score.statistics.count_miss < aimScore.misscount) {
                 const diff = score.statistics.count_miss - aimScore.misscount;
                 const oldMisscount = aimScore.misscount;
@@ -523,6 +525,29 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                 const string = "improved misscount by **" + Math.abs(diff) + "**! (" + oldMisscount + " -> " + score.statistics.count_miss +
                     ")\nnew leaderboard rank: **#" + rank + "**/" + scores.length
                 return string
+            } else if (blob.currPP > aimScore.pp && !same) {
+                //YOLO
+                const diff = blob.currPP - aimScore.pp;
+                await aimScores.create({
+                    map_id: score.beatmap.id,
+                    collection: validMap.collection,
+                    index: validMap.id,
+                    user_id: score.user_id,
+                    username: score.user.username,
+                    mods: mods,
+                    pp: blob.currPP,
+                    score: score.score,
+                    accuracy: accuracy,
+                    misscount: score.statistics.count_miss,
+                    combo: score.max_combo,
+                    max_combo: blob.stats.difficulty.maxCombo,
+                    date: score.created_at,
+                    hidden: hidden,
+                    is_current: 0,
+                    required_dt: validMap.required_dt
+                });
+                const string = "gained **" + Math.abs(diff).toFixed(2) + "** pp! (" + aimScore.pp + " -> " + blob.currPP + ")"
+                return string
             }
             return ""
         } else {
@@ -549,7 +574,7 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                 max_combo: blob.stats.difficulty.maxCombo,
                 date: score.created_at,
                 hidden: hidden,
-                is_current: is_current,
+                is_current: 0,
                 required_dt: validMap.required_dt
             });
             const scores = await aimScores.findAll({
@@ -569,7 +594,7 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
             }
             const mod = mods.substring(1)
             let congrats = "logged new " + mod + " score"+newmap+" into " + validMap.collection + "!"
-            if (preEntry == currentCollection - 1 && complete == currentCollection) {
+            if ((collectionName == currentD1Collection || collectionName == currentD2Collection) && preEntry == currentCollection - 1 && complete == currentCollection) {
                 console.log("applied role")
                 congrats = "🎉 congrats on " + mod + " completion for " + validMap.collection + "! 🎉"
                 //redo conditionals for giving hundo role
@@ -578,8 +603,8 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                     if (mod == "NM") await message.member.roles.add(nmRole).catch(console.error);
                     if (mod == "HR") await message.member.roles.add(hrRole).catch(console.error);
                 } else if (collectionName == currentD2Collection) {
-                    if (mod == "NM") await message.member.roles.add("1366104494072401980").catch(console.error);
-                    if (mod == "HR") await message.member.roles.add("1366104856502468750").catch(console.error);
+                    if (mod == "NM") await message.member.roles.add(nmRole2).catch(console.error);
+                    if (mod == "HR") await message.member.roles.add(nmRole2).catch(console.error);
                 }
                 //fix this
                 if (await message.member.roles.cache.has(nmRole) && await message.member.roles.cache.has(hrRole)) {

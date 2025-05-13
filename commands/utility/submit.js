@@ -19,6 +19,7 @@ async function misscount(osu_id, divName) {
     let totalMaps = 0;
     let nmMaps = 0;
     let hrMaps = 0;
+    let dtMaps = 0;
     const scores = await aimScores.findAll({ where: { user_id: osu_id, collection: divName } })
     const mapIDs = []
     const unique = []
@@ -29,35 +30,41 @@ async function misscount(osu_id, divName) {
             unique.push(scores[score])
         }
     }
-    let processing = true
-    while (processing) {
-        const scoreNM = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+NM" } })
-        const scoreHR = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+HR" } })
-        if (scoreNM && scoreHR) {
-            totalMaps++;
-            if (scoreNM.misscount > scoreHR.misscount) {
-                total = total + scoreHR.misscount
-                hrMaps++;
-            } else if (scoreNM.misscount < scoreHR.misscount) {
-                total = total + scoreNM.misscount
-                nmMaps++;
-            } else if (scoreNM.misscount == scoreHR.misscount) {
-                total = total + scoreNM.misscount
-                hrMaps++;
-            }
-        } else {
-            if (scoreNM) {
-                totalMaps++;
-                total = total + scoreNM.misscount
-                nmMaps++;
-            } else if (scoreHR) {
-                totalMaps++;
-                total = total + scoreHR.misscount
-                hrMaps++;
-            } else {
-
-            }
+         let processing = true
+      while (processing) {
+        //ehhhhhhhhhhhhhhhhh
+        let dt = false;
+        let scoreNM = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+NM", required_dt: false }, order: [["misscount", "asc"]] })
+        if (!scoreNM) {
+          scoreNM = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+DT", required_dt: true}, order: [["misscount", "asc"]] })
+          console.log("dt score")
+          if (scoreNM) dt = true
         }
+        const scoreHR = await aimScores.findOne({ where: { user_id: osu_id, map_id: unique[totalMaps].map_id, mods: "+HR", required_dt: false}, order: [["misscount", "asc"]] })
+        if (scoreNM && scoreHR && !dt) {
+          totalMaps++;
+          if (scoreNM.misscount > scoreHR.misscount) {
+            total = total + scoreHR.misscount
+            hrMaps++;
+          } else if (scoreNM.misscount < scoreHR.misscount) {
+            total = total + scoreNM.misscount
+            nmMaps++;
+          } else if (scoreNM.misscount == scoreHR.misscount) {
+            total = total + scoreNM.misscount
+            hrMaps++;
+          }
+        } else {
+          if (scoreNM) {
+            totalMaps++;
+            total = total + scoreNM.misscount
+            if (dt) { dtMaps++ } else { nmMaps++; }
+          } else if (scoreHR) {
+            totalMaps++;
+            total = total + scoreHR.misscount
+            hrMaps++;
+          }
+        }
+        //console.log(totalMaps)
         if (totalMaps == unique.length) processing = false;
     }
     return total
@@ -123,7 +130,7 @@ module.exports = {
                 } catch (err) {
                     console.log(err)
                 }
-                console.log(beatmap.beatmapset.user_id+" "+unique[11])
+                console.log(beatmap.beatmapset.user_id + " " + unique[11])
                 if (unique.includes(String(beatmap.beatmapset.user_id))) {
                     let mapper = "";
                     try {
@@ -141,7 +148,8 @@ module.exports = {
                         artist: beatmap.beatmapset.artist,
                         creator: beatmap.beatmapset.creator,
                         creatorID: beatmap.beatmapset.user_id,
-                        is_current: 0
+                        is_current: 0,
+                        required_dt: 0,
                     })
                     console.log("added " + beatmap.beatmapset.title)
                 }
@@ -164,14 +172,14 @@ module.exports = {
             //IS THIS N OR IS THIS DIVINE INTELLECT 
             let collectionName = "";
             let validMap;
-            if(validMaps.length > 0){
-                for(collection in validMaps){
-                    console.log("check check " + validMaps[collection].collection +"\nother collection check "+currentD2Collection)
-                    if(validMaps[collection].collection == currentD2Collection){
+            if (validMaps.length > 0) {
+                for (collection in validMaps) {
+                    console.log("check check " + validMaps[collection].collection + "\nother collection check " + currentD2Collection)
+                    if (validMaps[collection].collection == currentD2Collection) {
                         collectionName = currentD2Collection;
                         validMap = validMaps[collection]
-                    } 
-                    else if(validMaps[collection].collection == currentD1Collection){
+                    }
+                    else if (validMaps[collection].collection == currentD1Collection) {
                         collectionName = currentD1Collection;
                         validMap = validMaps[collection]
                     } else {
@@ -207,6 +215,7 @@ module.exports = {
                     balls.push(currentScore.beatmapset.artist + " - " + currentScore.beatmapset.title + " [" + currentScore.beatmap.version + "]")
                 let accuracy = (currentScore.accuracy * 100).toFixed(2)
                 if (aimScore) {
+                    const same = await aimScores.findOne({ where: {map_id: currentScore.beatmap.id, user_id: currentScore.user_id, mods: mods, pp: (currAttrs.pp).toFixed(2)}})
                     if (currentScore.statistics.count_miss < aimScore.misscount) {
                         if (aimScore.collection == currentD1Collection) {
                             newD1Misscount = newD1Misscount + (Number(aimScore.misscount) - Number(currentScore.statistics.count_miss))
@@ -223,6 +232,26 @@ module.exports = {
                         aimScore.hidden = hidden;
                         console.log("updating misscount...")
                         aimScore.save();
+                    } else if (currAttrs.pp > aimScore.pp && !same) {
+                        await aimScores.create({
+                            map_id: beatmapID,
+                            collection: collectionName,
+                            index: validMap.id,
+                            user_id: user.osu_id,
+                            username: user.username,
+                            mods: mods,
+                            pp: (currAttrs.pp).toFixed(2),
+                            score: currentScore.score,
+                            accuracy: accuracy,
+                            misscount: currentScore.statistics.count_miss,
+                            combo: currentScore.max_combo,
+                            max_combo: maxAttrs.state.maxCombo,
+                            date: currentScore.created_at,
+                            hidden: hidden,
+                            is_current: 0,
+                            required_dt: validMap.required_dt
+                        });
+                        console.log("adding new local...")
                     }
                 } else {
                     await aimScores.create({

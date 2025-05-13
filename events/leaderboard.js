@@ -6,68 +6,81 @@ const { lightskyblue } = require("color-name");
 let ending = "";
 
 async function buildEmbed(toggle) {
-  console.log("poop")
+  console.log("poaaaop")
   const userIDs = await osuUsers.findAll()
   let divName = currentD1Collection;
-  if(toggle) divName = currentD2Collection;
+  if (toggle) divName = currentD2Collection;
   const collection = await aimLists.findAll({ where: { collection: divName } })
   const validUsers = []
   const collectionName = collection[0].collection
   let userString = "";
   let special = "";
-  ending = "season 0 ends <t:1747094580:R>"
+  ending = "season 1 ends <t:1749859200:R>"
   for (id in userIDs) {
     let total = 0;
     let totalMaps = 0;
     let nmMaps = 0;
     let hrMaps = 0;
+    let dtMaps = 0;
     const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, collection: divName } })
     if (found) {
       const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, collection: divName } })
       const mapIDs = []
       const unique = []
       //???
-      for(score in scores){
-        if(!mapIDs.includes(scores[score].map_id)){
+      for (score in scores) {
+        if (!mapIDs.includes(scores[score].map_id)) {
           mapIDs.push(scores[score].map_id)
           unique.push(scores[score])
+          //console.log(unique[score].map_id+"/"+unique[score].misscount)
         }
       }
+      
       let processing = true
-      while(processing) {
-        const scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM" }, order: [["misscount", "DESC"]] })
-        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR" }, order: [["misscount", "DESC"]] })
-        if (scoreNM && scoreHR) {
+      while (processing) {
+        //ehhhhhhhhhhhhhhhhh
+        let dt = false;
+        let scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM", required_dt: false }, order: [["misscount", "asc"]] })
+        if (!scoreNM) {
+          scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DT", required_dt: true}, order: [["misscount", "asc"]] })
+          console.log("dt score")
+          if (scoreNM) dt = true
+        }
+        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR", required_dt: false}, order: [["misscount", "asc"]] })
+        if (scoreNM && scoreHR && !dt) {
           totalMaps++;
           if (scoreNM.misscount > scoreHR.misscount) {
             total = total + scoreHR.misscount
             hrMaps++;
-          } else if (scoreNM.misscount < scoreHR.misscount){
+          } else if (scoreNM.misscount < scoreHR.misscount) {
             total = total + scoreNM.misscount
             nmMaps++;
-          } else if (scoreNM.misscount == scoreHR.misscount){
+          } else if (scoreNM.misscount == scoreHR.misscount) {
             total = total + scoreNM.misscount
             hrMaps++;
           }
         } else {
-          if(scoreNM){
+          if (scoreNM) {
             totalMaps++;
             total = total + scoreNM.misscount
-            nmMaps++;
-          } else if(scoreHR){
+            if (dt) { dtMaps++ } else { nmMaps++; }
+          } else if (scoreHR) {
             totalMaps++;
             total = total + scoreHR.misscount
             hrMaps++;
-          } else {
-
           }
         }
-        if(totalMaps == unique.length) processing = false;
+        //console.log(totalMaps)
+        if (totalMaps == unique.length) processing = false;
       }
-      special = "("+nmMaps+" NM/"+hrMaps+" HR)"
-      if(hrMaps == 0) special = "("+nmMaps+" NM)"
-      if(nmMaps == 0) special = "("+hrMaps+" HR)"
-      
+      special = "(" + nmMaps + " NM/" + hrMaps + " HR"
+      //ITS TERRIBLE BRO FIX THIS
+      if(nmMaps == 0) special = "(" + hrMaps + " HR"
+      if(hrMaps == 0) special = "(" + nmMaps + " NM"
+      if(dtMaps > 0) special = "(" + dtMaps + " DT)"
+      special = special + ")"
+
+
       //console.log(userIDs[id].username+": "+nmMaps+"/"+hrMaps)
       const leaderboardMap = {
         username: userIDs[id].username,
@@ -78,7 +91,7 @@ async function buildEmbed(toggle) {
       }
       validUsers.push(leaderboardMap)
       //console.log(leaderboardMap)
-      //console.log(userIDs[id].username+": NM: "+nmMisscount+"x"+nmAsterik+", HR: "+hrMisscount+"x"+hrAsterik)
+      //console.log(userIDs[id].username + ": NM: " + nmMisscount + "x" + nmAsterik + ", HR: " + hrMisscount + "x" + hrAsterik)
       //console.log("maps played: "+mapsPlayed+"; "+scoresNM.length+"/"+scoresHR.length+" NM/HR plays")
     }
   }
@@ -89,23 +102,24 @@ async function buildEmbed(toggle) {
     if (user1.misscount < user2.misscount) return -1;
   });
   for (let i = 0; i < 25; i++) {
-      if(i < validUsers.length){
-          const current = validUsers[i];
-          let totalString = "";
-          if (current.mapcount != collection.length) {
-              totalString = "** • ** **" + current.mapcount + "**/" + collection.length + " scores"
-          }
-          const pageNum = Number(i) + 1;
-          userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount + " ** <:miss:1324410432450068555> "+totalString+" **" +current.speciality+"**\n")
+    if (i < validUsers.length) {
+      const current = validUsers[i];
+      let totalString = "";
+      if (current.mapcount != collection.length) {
+        totalString = "** • ** **" + current.mapcount + "**/" + collection.length + " scores"
       }
+      const pageNum = Number(i) + 1;
+      userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount + " ** <:miss:1324410432450068555> " + totalString + " **" + current.speciality + "**\n")
+    }
   }
   const d = new Date();
-
   const scoreEmbed = new EmbedBuilder()
-    .setAuthor({ name: "Leaderboard for: " + collectionName + "\nCurrent misscount leader: "+validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
+    .setAuthor({ name: "Leaderboard for: " + collectionName + "\nCurrent misscount leader: " + validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
     .setDescription(userString)
     .setColor(lightskyblue)
-    .setFooter({ text: "season theme: sped up songs\nlast updated "+d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount"});
+    .setFooter({ text: "season theme: whitecat 2020 yt\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount" });
+  //console.log("dfsdf")
+  //console.log(scoreEmbed)
   return scoreEmbed;
 }
 
@@ -122,9 +136,9 @@ module.exports = {
     }
     console.log(message.content);
     */
-    if(message.author.id == botID){
+    if (message.author.id == botID) {
       console.log(msg)
-      if(msg.includes("new leaderboard rank: ")){
+      if (msg.includes("logged new: ") || msg.includes("new leaderboard rank:")) {
         const channel = message.client.channels.cache.get(leaderboardChannel);
         const embed = await channel.messages.fetch(leaderboardMessage);
         const collection = await buildEmbed(getDivToggle());

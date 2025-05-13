@@ -76,7 +76,7 @@ function findMapStats(mapCS, mapAR, mapOD, mapBPM, mapLength, dtLength, htLength
 module.exports = {
 	name: Events.MessageCreate,
 	async execute(message) {
-        let msg = message.content;    
+        return;    
         if(msg.includes("https://osu.ppy.sh/beatmapsets/")){
         var id = msg.match(beatmapRegex);
         setBeatmapID(id[1]);

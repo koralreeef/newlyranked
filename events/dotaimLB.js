@@ -19,7 +19,7 @@ async function buildFull(map, ind, user, m) {
       ["date", "ASC"]
     ]
   })
-  if(mod != ""){
+  if (mod != "") {
     scores = await aimScores.findAll({
       where: { map_id: map.map_id, mods: mod, collection: map.collection },
       order: [
@@ -28,7 +28,7 @@ async function buildFull(map, ind, user, m) {
       ]
     })
   }
-  const author = await osuUsers.findOne({ where: {osu_id: user}})
+  const author = await osuUsers.findOne({ where: { osu_id: user } })
   let scoreArray = [];
   let userScore = "";
   const userScores = [];
@@ -45,12 +45,12 @@ async function buildFull(map, ind, user, m) {
       const score = Number(current.score);
       let hidden = "";
       let index = Number(i) + 1
-      if(current.hidden) hidden = " (HD)" 
+      if (current.hidden) hidden = " (HD)"
       let date = Date.parse(current.date);
       let season = "";
-      if(current.past_season) season = "**("+current.past_season+")**"
+      if (current.past_season) season = "**(" + current.past_season + ")**"
       let timestamp = Math.floor(date / 1000) //remove last subtraction after dst
-      userScore = ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
+      userScore = ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> " + season + "\n **"
         + current.accuracy + "%  • ** **" + current.combo + "x**/" + current.max_combo + " • " + score.toLocaleString() + "\n")
       userScores.push(userScore)
     }
@@ -67,32 +67,32 @@ async function buildFull(map, ind, user, m) {
       const current = scores[scor]
       const score = Number(scores[scor].score);
       let hidden = "";
-      if(current.hidden) hidden = " (HD)" 
+      if (current.hidden) hidden = " (HD)"
       let index = Number(scor) + 1
       let date = Date.parse(scores[scor].date);
       let timestamp = Math.floor(date / 1000) //remove last subtraction after dst
       let season = "";
-      if(current.past_season) season = "**("+current.past_season+")**"
+      if (current.past_season) season = "**(" + current.past_season + ")**"
       if (current.user_id == user) {
-        scoreString = scoreString + ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
+        scoreString = scoreString + ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> " + season + "\n **"
           + current.accuracy + "%  • ** **" + current.combo + "x**/" + current.max_combo + " • " + score.toLocaleString() + "\n")
-        selfScore = selfScore + ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
+        selfScore = selfScore + ("**#" + index + "** **__[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")__** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> " + season + "\n **"
           + current.accuracy + "%  • ** **" + current.combo + "x**/" + current.max_combo + " • " + score.toLocaleString() + "\n")
       } else {
-        scoreString = scoreString + ("**#" + index + "** **[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
+        scoreString = scoreString + ("**#" + index + "** **[" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ")** • **" + current.misscount + "** <:miss:1324410432450068555> ** " + current.mods + hidden + "**  <t:" + timestamp + ":R> " + season + "\n **"
           + current.accuracy + "%  • ** **" + current.combo + "x**/" + current.max_combo + " • " + score.toLocaleString() + "\n")
       }
       //i barely know how this is working jesus christ
       if (index % 15 == 0) {
         const check = [];
-        for(userscore in userScores){
-          if(!scoreString.includes(userScores[userscore])){
+        for (userscore in userScores) {
+          if (!scoreString.includes(userScores[userscore])) {
             check.push(userScores[userscore])
           }
         }
-        if (check.length > 0){
+        if (check.length > 0) {
           scoreString = scoreString + "\n__**" + author.username + "'s score (s):**__ \n";
-          for(userscore in check){
+          for (userscore in check) {
             scoreString = scoreString + check[userscore]
           }
         }
@@ -101,21 +101,21 @@ async function buildFull(map, ind, user, m) {
       }
     }
     const check = [];
-    for(userscore in userScores){
-      if(!scoreString.includes(userScores[userscore])){
+    for (userscore in userScores) {
+      if (!scoreString.includes(userScores[userscore])) {
         check.push(userScores[userscore])
       }
     }
-    if (check.length > 0){
+    if (check.length > 0) {
       scoreString = scoreString + "\n__**" + author.username + "'s score (s):**__ \n";
-      for(userscore in check){
+      for (userscore in check) {
         scoreString = scoreString + check[userscore]
       }
     }
     scoreArray.push(scoreString);
   }
-  console.log(userScores)
-  console.log(userScores.length)
+  //console.log(userScores)
+  //console.log(userScores.length)
   scoreEmbed = new EmbedBuilder()
     .setAuthor({
       name: name,
@@ -136,9 +136,9 @@ async function buildFull(map, ind, user, m) {
 
 async function buildEmbed(map, ind, maxIndex, user) {
   let dt = ""
-  if(map.required_dt) dt = "+DT"
-  console.log(map)
-  const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "] "+dt
+  if (map.required_dt) dt = "+DT"
+  //console.log(map)
+  const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "] " + dt
   let name = "no misscount leader yet!"
   let iconLink = ""
   let pageNum = Number(ind) + 1;
@@ -164,15 +164,15 @@ async function buildEmbed(map, ind, maxIndex, user) {
       let date = Date.parse(bro.date);
       let timestamp = Math.floor(date / 1000);
       let season = "";
-      if(bro.past_season) season = "**("+bro.past_season+")**"
+      if (bro.past_season) season = "**(" + bro.past_season + ")**"
       if (bro.hidden) {
         hidden = " (HD)"
       }
       if (bro.user_id == user) {
-        scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")__** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n **"
+        scoreArray = scoreArray + ("**#" + index + "** **__[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")__** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R> " + season + "\n **"
           + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
       } else {
-        scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R> "+season+"\n  **"
+        scoreArray = scoreArray + ("**#" + index + "** **[" + bro.username + "](https://osu.ppy.sh/users/" + scores[score].user_id + ")** • **" + bro.misscount + "** <:miss:1324410432450068555> ** " + bro.mods + hidden + "**  <t:" + timestamp + ":R> " + season + "\n  **"
           + bro.accuracy + "%  • ** **" + bro.combo + "x**/" + bro.max_combo + " • " + bro.score.toLocaleString() + "\n")
       }
     }
@@ -224,15 +224,15 @@ module.exports = {
       //maybe have a command for this aswell
       const magnify = new ButtonBuilder()
         .setCustomId("magnify" + epoch)
-        //.setDisabled(true)
+        .setDisabled(true)
         .setLabel("🔎")
         .setStyle(ButtonStyle.Primary);
 
       const zoom = new ButtonBuilder()
-      .setCustomId("zoomOut" + epoch)
-      //.setDisabled(true)
-      .setLabel("⤵️")
-      .setStyle(ButtonStyle.Primary);
+        .setCustomId("zoomOut" + epoch)
+        //.setDisabled(true)
+        .setLabel("⤵️")
+        .setStyle(ButtonStyle.Primary);
 
       const hr = new ButtonBuilder()
         .setCustomId("hr" + epoch)
@@ -240,25 +240,25 @@ module.exports = {
         .setStyle(ButtonStyle.Danger);
 
       const reset = new ButtonBuilder()
-          .setCustomId("reset" + epoch)
-          .setLabel("reset")
-          .setStyle(ButtonStyle.Success);
+        .setCustomId("reset" + epoch)
+        .setLabel("reset")
+        .setStyle(ButtonStyle.Success);
 
       const nm = new ButtonBuilder()
-          .setCustomId("nm" + epoch)
-          .setLabel("nm only")
-          .setStyle(ButtonStyle.Secondary);
+        .setCustomId("nm" + epoch)
+        .setLabel("nm only")
+        .setStyle(ButtonStyle.Secondary);
 
       const magnifyBackward = new ButtonBuilder()
-      .setCustomId("magnifyBack" + epoch)
-      .setDisabled(true)
-      .setLabel("⟵")
-      .setStyle(ButtonStyle.Primary);
+        .setCustomId("magnifyBack" + epoch)
+        .setDisabled(true)
+        .setLabel("⟵")
+        .setStyle(ButtonStyle.Primary);
 
       const magnifyForward = new ButtonBuilder()
-      .setCustomId("magnifyForward" + epoch)
-      .setLabel("⟶")
-      .setStyle(ButtonStyle.Primary);
+        .setCustomId("magnifyForward" + epoch)
+        .setLabel("⟶")
+        .setStyle(ButtonStyle.Primary);
 
       const backward = new ButtonBuilder()
         .setCustomId("back" + epoch)
@@ -337,7 +337,15 @@ module.exports = {
         if (ind > 0) backward.setDisabled(false)
         if (ind == maxIndex) forward.setDisabled(false)
       }
-
+      //THIS SUCKSSSSSS
+      let brah = await aimScores.findAll({
+        where: { map_id: aimList[ind].map_id },
+      })
+      if (brah.length > 0) {
+        magnify.setDisabled(false)
+      } else {
+        magnify.setDisabled(true)
+      }
       const leaderboard = await buildEmbed(aimList[ind], ind, maxIndex, user);
       if (aimList.length == 1) {
         return await message.channel.send({ embeds: [leaderboard] })
@@ -355,29 +363,38 @@ module.exports = {
         let magnifyUnfiltered = await aimScores.findAll({
           where: { map_id: aimList[ind].map_id },
         })
-        if(mod != ""){
+        if (mod != "") {
           magnifyUnfiltered = await aimScores.findAll({
             where: { map_id: aimList[ind].map_id, mods: mod },
           })
         }
         //extra query :(((((((())))))))
         const unique = []
-        if(magnifyUnfiltered.length > 0){
+        if (magnifyUnfiltered.length > 0) {
           magnify.setDisabled(false)
-          for(score in magnifyUnfiltered){
-            if(!unique.includes(magnifyUnfiltered[score].user_id)){
+          for (score in magnifyUnfiltered) {
+            if (!unique.includes(magnifyUnfiltered[score].user_id)) {
               unique.push(magnifyUnfiltered[score].user_id)
             }
           }
         } else {
-          magnify.setDisabled(true) 
+          magnify.setDisabled(true)
         }
+        //extra query :(((((((())))))))
         let magnifyMapCount = unique.length
         let maxMagnifyIndex = Math.trunc((unique.length / 15))
-        if(magnifyMapCount % 15 == 0) maxMagnifyIndex--
+        if (magnifyMapCount % 15 == 0) maxMagnifyIndex--
         if (m.customId === "back" + epoch) {
           ind--;
           if (ind == 0) backward.setDisabled(true);
+          let brah = await aimScores.findAll({
+            where: { map_id: aimList[ind].map_id },
+          })
+          if (brah.length > 0) {
+            magnify.setDisabled(false)
+          } else {
+            magnify.setDisabled(true)
+          }
           forward.setDisabled(false);
           console.log("backwards");
           await m.update({
@@ -386,7 +403,7 @@ module.exports = {
           })
         }
         if (m.customId === "magnify" + epoch) {
-          if(magnifyMapCount < 15){
+          if (magnifyMapCount < 15) {
             magnifyForward.setDisabled(true);
             magnifyBackward.setDisabled(true);
           }
@@ -432,7 +449,7 @@ module.exports = {
           magnifyMapCount = await aimScores.count({
             where: { map_id: aimList[ind].map_id, mods: mod },
           })
-          if(magnifyMapCount <= 15){
+          if (magnifyMapCount <= 15) {
             magnifyForward.setDisabled(true);
             magnifyBackward.setDisabled(true);
           } else {
@@ -451,7 +468,7 @@ module.exports = {
           magnifyMapCount = await aimScores.count({
             where: { map_id: aimList[ind].map_id, mods: "+HR" },
           })
-          if(magnifyMapCount <= 15){
+          if (magnifyMapCount <= 15) {
             magnifyForward.setDisabled(true);
             magnifyBackward.setDisabled(true);
           } else {
@@ -470,7 +487,7 @@ module.exports = {
           magnifyMapCount = await aimScores.count({
             where: { map_id: aimList[ind].map_id },
           })
-          if(magnifyMapCount < 15){
+          if (magnifyMapCount < 15) {
             magnifyForward.setDisabled(true);
             magnifyBackward.setDisabled(true);
           } else {
@@ -487,6 +504,14 @@ module.exports = {
         if (m.customId === "forward" + epoch) {
           ind++
           if (ind == maxIndex) forward.setDisabled(true);
+          let brah = await aimScores.findAll({
+            where: { map_id: aimList[ind].map_id },
+          })
+          if (brah.length > 0) {
+            magnify.setDisabled(false)
+          } else {
+            magnify.setDisabled(true)
+          }
           backward.setDisabled(false);
           console.log("forwards");
           await m.update({
