@@ -2,7 +2,7 @@ const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, Moda
 const { Client } = require("osu-web.js");
 const { getAccessToken } = require('../helper.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
-const { currentD2Collection } = require('../config.json');
+const { currentD1Collection, currentD2Collection } = require('../config.json');
 const { lightskyblue } = require("color-name");
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
@@ -296,7 +296,7 @@ module.exports = {
         mapIndex = Number(msg.substring(msg.indexOf("p=") + 2, collectionStr)) - 1;
       }
       let aimList = await aimLists.findAll({
-        where: { is_current: 1 },
+        where: { collection: currentD1Collection },
         order: [
           ["map_id", "DESC"],
         ]

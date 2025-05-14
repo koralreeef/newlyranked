@@ -1,9 +1,9 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole } = require('../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole, hundoRole2 } = require('../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../db/dbObjects.js');
-const { tools, v2, auth } = require('osu-api-extended')
+const { tools, v2, auth, v2_scores_list_user_firsts } = require('osu-api-extended')
 const { setBeatmapID, getAccessToken } = require('../helper.js');
 const { hr, ez } = calcModStat;
 const axios = require('axios');
@@ -90,6 +90,7 @@ async function calcLazerPP(score, map, total, modString) {
     let adjustSettings = [];
     let clockSettings = [];
     let dt = false;
+    let rate = 1;
     //console.log(details);
     for (const mod of details.mods) {
         if (mod.acronym === "DA") {
@@ -98,6 +99,7 @@ async function calcLazerPP(score, map, total, modString) {
         }
         if (mod.acronym === "DT") {
             dt = true;
+            rate = 1.5;
             clockSettings = mod.settings;
         }
         if (mod.acronym === "CL") {
@@ -106,12 +108,16 @@ async function calcLazerPP(score, map, total, modString) {
         }
     }
     if (dt) {
-        if (clockSettings.speed_change != 1.5)
-            lazerMods = lazerMods + " (" + clockSettings.speed_change + "x)";
+        console.log(clockSettings)
+        if (clockSettings){
+            if (clockSettings.speed_change != 1.5)
+                rate = clockSettings.speed_change;
+                lazerMods = lazerMods + " (" + clockSettings.speed_change + "x)";
+        }
     }
     //console.log(details);
     const cs = adjustSettings.circle_size ?? map.cs;
-    const clockRate = clockSettings.speed_change ?? 1;
+    const clockRate = rate;
     const lazer_hits = {
         ok: details.statistics.ok ?? 0,
         great: details.statistics.great ?? 0,
@@ -431,7 +437,7 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
         mods = mods + "NM";
     }
     if (lazer) {
-        const banned = ["DA", "DC", "HT", "DT"]
+        const banned = ["DA", "DC", "HT"]
         if (details) {
             for (const mod of details.mods) {
                 if (banned.includes(mod.acronym)) return
@@ -445,7 +451,7 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                 }
             }
         }
-        console.log("im through!!")
+        console.log("im through!!"+mods)
     }
 
     const added = await createLeaderboard(api, score.beatmap.id, score.user.username)
@@ -482,9 +488,16 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
     //check for time later
     //add patch from test2.js for storing multiple scores
     if (validMap && score.passed && dtCheck) {
-        const currentCollection = await aimLists.count({
-            where: { collection: collectionName },
+        let dt = false;
+        let currentCollection = await aimLists.count({
+            where: { collection: collectionName, required_dt: false },
         });
+        if(mods.includes("+DT")){
+            dt = true;
+            currentCollection = await aimLists.count({
+            where: { collection: collectionName, required_dt: true },
+        });
+        }
         if (aimScore) {
             console.log("existing score found")
             const same = await aimScores.findOne({ where: {map_id: score.beatmap.id, user_id: score.user_id, mods: mods, pp: blob.currPP}})
@@ -556,9 +569,19 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                 is_current = 1;
             }
             console.log("creating new score")
-            const preEntry = await aimScores.count({
-                where: { user_id: score.user_id, collection: collectionName, mods: mods }
+            const preEntry = await aimScores.findAll({
+                where: { user_id: score.user_id, collection: collectionName, mods: mods, required_dt: dt}
             })
+            const uniquePreEntry = []
+            const mapIDsPreEntry = []
+            for (s in preEntry) {
+                if (!mapIDsPreEntry.includes(preEntry[s].map_id)) {
+                    mapIDsPreEntry.push(preEntry[s].map_id)
+                    uniquePreEntry.push(preEntry[s].map_id)
+                    //console.log(scores[score].map_id)
+                }
+            }
+            console.log(uniquePreEntry)
             await aimScores.create({
                 map_id: score.beatmap.id,
                 collection: validMap.collection,
@@ -583,34 +606,56 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                     ["misscount", "ASC"],
                 ]
             })
-            const complete = await aimScores.count({
-                where: { user_id: score.user_id, collection: collectionName, mods: mods }
+            const complete = await aimScores.findAll({
+                where: { user_id: score.user_id, collection: collectionName, mods: mods, required_dt: dt}
             })
-            //console.log("asdad" + preEntry)
-            //console.log("asd" + complete)
+            const uniqueComplete = []
+            const mapIDsComplete = []
+            for (e in complete) {
+                if (!mapIDsComplete.includes(complete[e].map_id)) {
+                    mapIDsComplete.push(complete[e].map_id)
+                    uniqueComplete.push(complete[e])
+                    //console.log(scores[score].map_id)
+                }
+            }
+            console.log("asdad" + uniquePreEntry.length)
+            console.log("asd" + uniqueComplete.length)
             let newmap = "";
             if(added) {
                 newmap = " and map"
             }
             const mod = mods.substring(1)
             let congrats = "logged new " + mod + " score"+newmap+" into " + validMap.collection + "!"
-            if ((collectionName == currentD1Collection || collectionName == currentD2Collection) && preEntry == currentCollection - 1 && complete == currentCollection) {
-                console.log("applied role")
-                congrats = "🎉 congrats on " + mod + " completion for " + validMap.collection + "! 🎉"
+            if ((collectionName == currentD1Collection || collectionName == currentD2Collection) && uniquePreEntry.length == currentCollection - 1 && uniqueComplete.length == currentCollection) {
+                console.log("applied role");
+                congrats = "🎉 congrats on " + mod + " completion for " + validMap.collection + "! 🎉";
+                const user = await osuUsers.findOne({where: {osu_id: score.user_id}})
                 //redo conditionals for giving hundo role
                 //get guild member object from the user id from the score, not the message
                 if (collectionName == currentD1Collection) {
-                    if (mod == "NM") await message.member.roles.add(nmRole).catch(console.error);
-                    if (mod == "HR") await message.member.roles.add(hrRole).catch(console.error);
+                    if(mod.includes("DT")){ user.dt1 = true; }
+                    else if(mod.includes("NM")){ user.nm1 = true; }
+                    else if(mod == "HR"){ user.hr1 = true; }
+                    user.save()
+                    if(user.nm1 && user.dt1 && user.hr1){ 
+                        congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉";
+                        await message.member.roles.add(hundoRole).catch(console.error);
+                    }
+                    else if (user.nm1 && user.dt1) await message.member.roles.add(nmRole).catch(console.error);
+                    else if (user.hr1) await message.member.roles.add(hrRole).catch(console.error);
                 } else if (collectionName == currentD2Collection) {
-                    if (mod == "NM") await message.member.roles.add(nmRole2).catch(console.error);
-                    if (mod == "HR") await message.member.roles.add(nmRole2).catch(console.error);
+                    if(mod.includes("DT")){ user.dt2 = true; }
+                    else if(mod.includes("NM")){ user.nm2 = true; }
+                    else if(mod == "HR"){ user.hr2 = true; }
+                    user.save()
+                    if(user.nm2 && user.dt2 && user.hr2){ 
+                        congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉";
+                        await message.member.roles.add(hundoRole2).catch(console.error);
+                    }
+                    else if (user.nm2 && user.dt2) await message.member.roles.add(nmRole2).catch(console.error);
+                    else if (user.hr2) await message.member.roles.add(hrRole2).catch(console.error);
                 }
                 //fix this
-                if (await message.member.roles.cache.has(nmRole) && await message.member.roles.cache.has(hrRole)) {
-                    congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉"
-                    message.member.roles.add(hundoRole).catch(console.error);
-                }
             }
             let checking = true;
             let i = 0;
@@ -727,6 +772,8 @@ module.exports = {
                     if (score.type != "solo_score") {
                         lazer = false;
                         modString = modString + "CL";
+                    } else {
+                        if(modString === "") modString = "NM"
                     }
 
                     const result = await tools.download_beatmaps({

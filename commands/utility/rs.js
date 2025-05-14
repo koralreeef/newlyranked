@@ -1,6 +1,6 @@
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole } = require('../../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole, hundoRole2 } = require('../../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
@@ -87,6 +87,7 @@ async function calcLazerPP(score, map, total, modString) {
     let adjustSettings = [];
     let clockSettings = [];
     let dt = false;
+    let rate = 1;
     //console.log(details);
     for (const mod of details.mods) {
         if (mod.acronym === "DA") {
@@ -95,18 +96,25 @@ async function calcLazerPP(score, map, total, modString) {
         }
         if (mod.acronym === "DT") {
             dt = true;
+            rate = 1.5;
             clockSettings = mod.settings;
+        }
+        if (mod.acronym === "CL") {
+            console.log(mod.settings)
+            lazerMods = modString + "CL";
         }
     }
     if (dt) {
-        if (clockSettings.speed_change != 1.5)
-            lazerMods = lazerMods + " (" + clockSettings.speed_change + "x)";
+        console.log(clockSettings)
+        if (clockSettings){
+            if (clockSettings.speed_change != 1.5)
+                rate = clockSettings.speed_change;
+                lazerMods = lazerMods + " (" + clockSettings.speed_change + "x)";
+        }
     }
     //console.log(details);
-    console.log(clockSettings);
-    console.log(adjustSettings);
     const cs = adjustSettings.circle_size ?? map.cs;
-    const clockRate = clockSettings.speed_change ?? 1;
+    const clockRate = rate;
     const lazer_hits = {
         ok: details.statistics.ok ?? 0,
         great: details.statistics.great ?? 0,
@@ -184,7 +192,8 @@ async function calcLazerPP(score, map, total, modString) {
         const fcPP = (FCAttrs.pp).toFixed(2);
         return {
             stats: maxAttrs, currPP: currentPP, fcPP: fcPP, maxPP: maxPP,
-            accuracy: lazer_accuracy.accuracy, clockRate: clockRate, cs: cs, adjust: adjustSettings ?? null, lazerMods
+            accuracy: lazer_accuracy.accuracy, clockRate: clockRate, cs: cs, adjust: adjustSettings ?? null, lazerMods,
+            details: details
         }
     }
 }
@@ -404,7 +413,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         });
     return rsEmbed;
 }
-async function inputScore(blob, score, acc, modArray, interaction, lazer, details, api) {
+async function inputScore(blob, score, acc, modArray, message, lazer, details, api) {
     //const epoch = Date.now();
     //store two versions of best score
     //ugh thats so annoying man
@@ -421,11 +430,11 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
     if (modArray.includes("HR")) {
         mods = mods + "HR"
     }
-    if (mods === "+") {
+    if(mods === "+"){
         mods = mods + "NM";
     }
     if (lazer) {
-        const banned = ["DA", "DC", "HT", "DT"]
+        const banned = ["DA", "DC", "HT"]
         if (details) {
             for (const mod of details.mods) {
                 if (banned.includes(mod.acronym)) return
@@ -450,14 +459,14 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
     let collectionName = "";
     let validMap;
     let dtCheck;
-    if (validMaps.length > 0) {
-        for (collection in validMaps) {
-            console.log("check check " + validMaps[collection].collection + "\nother collection check " + currentD2Collection)
-            if (validMaps[collection].collection == currentD2Collection) {
+    if(validMaps.length > 0){
+        for(collection in validMaps){
+            console.log("check check " + validMaps[collection].collection +"\nother collection check "+currentD2Collection)
+            if(validMaps[collection].collection == currentD2Collection){
                 collectionName = currentD2Collection;
                 validMap = validMaps[collection]
-            }
-            else if (validMaps[collection].collection == currentD1Collection) {
+            } 
+            else if(validMaps[collection].collection == currentD1Collection){
                 collectionName = currentD1Collection;
                 validMap = validMaps[collection]
             } else {
@@ -472,13 +481,20 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, mods: mods },
     });
-    console.log("check check" + validMap + "\ndt check " + dtCheck)
+    console.log("check check" + validMap +"\ndt check "+dtCheck)
     //check for time later
     //add patch from test2.js for storing multiple scores
     if (validMap && score.passed && dtCheck) {
-        const currentCollection = await aimLists.count({
-            where: { collection: collectionName },
+        let dt = false;
+        let currentCollection = await aimLists.count({
+            where: { collection: collectionName, required_dt: false },
         });
+        if(mods.includes("+DT")){
+            dt = true;
+            currentCollection = await aimLists.count({
+            where: { collection: collectionName, required_dt: true },
+        });
+        }
         if (aimScore) {
             console.log("existing score found")
             const same = await aimScores.findOne({ where: {map_id: score.beatmap.id, user_id: score.user_id, mods: mods, pp: blob.currPP}})
@@ -550,9 +566,19 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
                 is_current = 1;
             }
             console.log("creating new score")
-            const preEntry = await aimScores.count({
-                where: { user_id: score.user_id, collection: collectionName, mods: mods }
+            const preEntry = await aimScores.findAll({
+                where: { user_id: score.user_id, collection: collectionName, mods: mods, required_dt: dt}
             })
+            const uniquePreEntry = []
+            const mapIDsPreEntry = []
+            for (s in preEntry) {
+                if (!mapIDsPreEntry.includes(preEntry[s].map_id)) {
+                    mapIDsPreEntry.push(preEntry[s].map_id)
+                    uniquePreEntry.push(preEntry[s].map_id)
+                    //console.log(scores[score].map_id)
+                }
+            }
+            console.log(uniquePreEntry)
             await aimScores.create({
                 map_id: score.beatmap.id,
                 collection: validMap.collection,
@@ -577,48 +603,69 @@ async function inputScore(blob, score, acc, modArray, interaction, lazer, detail
                     ["misscount", "ASC"],
                 ]
             })
-            const complete = await aimScores.count({
-                where: { user_id: score.user_id, collection: collectionName, mods: mods }
+            const complete = await aimScores.findAll({
+                where: { user_id: score.user_id, collection: collectionName, mods: mods, required_dt: dt}
             })
-            //console.log("asdad" + preEntry)
-            //console.log("asd" + complete)
+            const uniqueComplete = []
+            const mapIDsComplete = []
+            for (e in complete) {
+                if (!mapIDsComplete.includes(complete[e].map_id)) {
+                    mapIDsComplete.push(complete[e].map_id)
+                    uniqueComplete.push(complete[e])
+                    //console.log(scores[score].map_id)
+                }
+            }
+            console.log("asdad" + uniquePreEntry.length)
+            console.log("asd" + uniqueComplete.length)
             let newmap = "";
-            if (added) {
+            if(added) {
                 newmap = " and map"
             }
             const mod = mods.substring(1)
-            let congrats = "logged new " + mod + " score" + newmap + " into " + validMap.collection + "!"
-            if ((collectionName == currentD1Collection || collectionName == currentD2Collection) && preEntry == currentCollection - 1 && complete == currentCollection) {
-                const mod = mods.substring(1)
-                console.log("applied role")
-                congrats = "🎉 congrats on " + mod + " completion for " + validMap.collection + "! 🎉"
+            let congrats = "logged new " + mod + " score"+newmap+" into " + validMap.collection + "!"
+            if ((collectionName == currentD1Collection || collectionName == currentD2Collection) && uniquePreEntry.length == currentCollection - 1 && uniqueComplete.length == currentCollection) {
+                console.log("applied role");
+                congrats = "🎉 congrats on " + mod + " completion for " + validMap.collection + "! 🎉";
+                const user = await osuUsers.findOne({where: {osu_id: score.user_id}})
                 //redo conditionals for giving hundo role
                 //get guild member object from the user id from the score, not the message
                 if (collectionName == currentD1Collection) {
-                    if (mod == "NM") await interaction.member.roles.add(nmRole).catch(console.error);
-                    if (mod == "HR") await interaction.member.roles.add(hrRole).catch(console.error);
+                    if(mod.includes("DT")){ user.dt1 = true; }
+                    else if(mod.includes("NM")){ user.nm1 = true; }
+                    else if(mod == "HR"){ user.hr1 = true; }
+                    user.save()
+                    if(user.nm1 && user.dt1 && user.hr1){ 
+                        congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉";
+                        await message.member.roles.add(hundoRole).catch(console.error);
+                    }
+                    else if (user.nm1 && user.dt1) await message.member.roles.add(nmRole).catch(console.error);
+                    else if (user.hr1) await message.member.roles.add(hrRole).catch(console.error);
                 } else if (collectionName == currentD2Collection) {
-                    if (mod == "NM") await interaction.member.roles.add(nmRole2).catch(console.error);
-                    if (mod == "HR") await interaction.member.roles.add(nmRole2).catch(console.error);
+                    if(mod.includes("DT")){ user.dt2 = true; }
+                    else if(mod.includes("NM")){ user.nm2 = true; }
+                    else if(mod == "HR"){ user.hr2 = true; }
+                    user.save()
+                    if(user.nm2 && user.dt2 && user.hr2){ 
+                        congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉";
+                        await message.member.roles.add(hundoRole2).catch(console.error);
+                    }
+                    else if (user.nm2 && user.dt2) await message.member.roles.add(nmRole2).catch(console.error);
+                    else if (user.hr2) await message.member.roles.add(hrRole2).catch(console.error);
                 }
                 //fix this
-                if (await interaction.member.roles.cache.has(nmRole) && await interaction.member.roles.cache.has(hrRole)) {
-                    congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉"
-                    interaction.member.roles.add(hundoRole).catch(console.error);
-                }
             }
             let checking = true;
             let i = 0;
             let rank = 0;
             const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, date: score.created_at }, order: [["misscount", "ASC"]] })
-            while (checking) {
+            while (checking) {     
                 if (scores.length == 1) {
                     rank = 1;
                     checking = false;
                 }
-                //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
+                 //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
                 else if (found.misscount <= scores[i].misscount) {
-                    const sameCount = await aimScores.count({ where: { map_id: score.beatmap.id, collection: collectionName, misscount: found.misscount } })
+                    const sameCount = await aimScores.count({ where: { map_id: score.beatmap.id, collection: collectionName, misscount: found.misscount }})
                     rank = Number(i) + sameCount;
                     checking = false;
                 }
@@ -692,6 +739,8 @@ module.exports = {
                 if (score.type != "solo_score") {
                     lazer = false;
                     modString = modString + "CL";
+                } else {
+                    if(modString === "") modString = "NM"
                 }
 
                 const result = await tools.download_beatmaps({

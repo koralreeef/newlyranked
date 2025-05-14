@@ -103,7 +103,7 @@ async function buildEmbed(ind, toggle, backward, forward) {
             //ITS TERRIBLE BRO FIX THIS
             if(nmMaps == 0) special = "(" + hrMaps + " HR"
             if(hrMaps == 0) special = "(" + nmMaps + " NM"
-            if(dtMaps > 0) special = "(" + dtMaps + " DT)"
+            if(dtMaps > 0) special = special + "/" + dtMaps + " DT"
             special = special + ")"
 
             //console.log(userIDs[id].username+": "+nmMaps+"/"+hrMaps)
@@ -196,12 +196,12 @@ async function sortByMod(mod, toggle, ind, backward, forward) {
     console.log(toggle)
     const board = toggle.pp;
     if (toggle.div) divName = currentD2Collection;
-    const collection = await aimLists.findAll({ where: { collection: divName } })
+    const collection = await aimLists.findAll({ where: { collection: divName, required_dt: dt } })
     const validUsers = []
     const collectionName = divName
     let userString = "";
     let special = "";
-    ending = "season 0 ends <t:1747094580:R>"
+    ending = "season 1 ends <t:1749859200:R>"
     for (id in userIDs) {
         let total = 0;
         const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, collection: divName, mods: mod, required_dt: dt } })
