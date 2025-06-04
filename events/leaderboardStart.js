@@ -135,12 +135,12 @@ async function buildEmbed(ind, toggle, backward, forward) {
     }
     //console.log(validUsers)
     let measure = "misscount";
-    let emoji = "<:miss:1324410432450068555>";
+    let emoji = " <:miss:1324410432450068555>";
     let mode = "misscount";
     if (board) {
-        measure = "score";
-        emoji = "**PP**";
-        mode = "score";
+        measure = "pp";
+        emoji = "pp";
+        mode = "pp";
     }
     //genuinely dont know how to solve this we might need a rewrite
     let offset = Math.trunc(validUsers.length / 25)
@@ -166,7 +166,7 @@ async function buildEmbed(ind, toggle, backward, forward) {
                 totalString = "** • ** **" + current.mapcount + "**/" + collection.length + " scores"
             }
             const pageNum = Number(i) + 1;
-            userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + " ** " + emoji + " " + totalString + " **" + current.speciality + "**\n")
+            userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + "**" + emoji + " " + totalString + " **" + current.speciality + "**\n")
         }
     }
     //console.log(userString)
@@ -206,18 +206,33 @@ async function sortByMod(mod, toggle, ind, backward, forward) {
         let total = 0;
         const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, collection: divName, mods: mod, required_dt: dt } })
         if (found) {
-            const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, collection: divName, mods: mod, required_dt: dt } })
+            let measure = "misscount";
+            let sort = "asc";
+            if(board){ 
+                measure = "pp";
+                sort = "desc";
+            }
+            const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, collection: divName, mods: mod, required_dt: dt }, order: [[measure, sort]] })
+            const mapIDs = []
+            const unique = []
+            //???
             for (score in scores) {
+                if (!mapIDs.includes(scores[score].map_id)) {
+                    mapIDs.push(scores[score].map_id)
+                    unique.push(scores[score])
+                }
+            }
+            for (score in unique) {
                 if (board) {
-                    total = total + scores[score].score
+                    total = total + unique[score].pp
                 } else {
-                    total = total + scores[score].misscount
+                    total = total + unique[score].misscount
                 }
             }
             const leaderboardMap = {
                 username: userIDs[id].username,
                 user_id: userIDs[id].osu_id,
-                mapcount: scores.length,
+                mapcount: unique.length,
                 misscount: total,
             }
             validUsers.push(leaderboardMap)
@@ -244,9 +259,9 @@ async function sortByMod(mod, toggle, ind, backward, forward) {
     let emoji = "<:miss:1324410432450068555>";
     let mode = "misscount";
     if (board) {
-        measure = "score";
-        emoji = "";
-        mode = "score";
+        measure = "pp";
+        emoji = "pp";
+        mode = "pp";
     }
     let offset = Math.trunc(validUsers.length / 25)
     let index = Number(ind);
@@ -272,7 +287,7 @@ async function sortByMod(mod, toggle, ind, backward, forward) {
                 totalString = " • **" + current.mapcount + "**/" + collection.length + " **" + mod.substring(1) + "**"
             }
             const pageNum = Number(i) + 1;
-            userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + " ** " + emoji + " " + totalString + "\n")
+            userString = userString + ("**#" + pageNum + " [" + current.username + "](https://osu.ppy.sh/users/" + current.user_id + ") • " + current.misscount.toLocaleString() + "**" + emoji + " " + totalString + "\n")
         }
     }
     const d = new Date();

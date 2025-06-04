@@ -138,7 +138,7 @@ module.exports = {
     */
     if (message.author.id == botID) {
       console.log(msg)
-      if (msg.includes("logged new: ") || msg.includes("new leaderboard rank:")) {
+      if (msg.includes("logged new ") || msg.includes("new leaderboard rank:") || msg.includes("gained")) {
         const channel = message.client.channels.cache.get(leaderboardChannel);
         const embed = await channel.messages.fetch(leaderboardMessage);
         const collection = await buildEmbed(getDivToggle());

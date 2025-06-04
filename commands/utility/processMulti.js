@@ -210,14 +210,14 @@ module.exports = {
                         let mods = "+NM";
                         let hidden = false;
                         if (currentScore.mods.includes("HR")) mods = "+HR"
-                        if (currentScore.mods.includes("DT")) mods = "+DT"
+                        if (currentScore.mods.includes("DT") || currentScore.mods.includes("NC")) mods = "+DT"
                         if (currentScore.mods.includes("HD")) hidden = true;
                         const maps = await aimScores.findOne({ where: { map_id: beatmap } })
                         const aimScore = await aimScores.findOne({ where: { user_id: user.osu_id, map_id: beatmap, mods: mods } })
                         const maxAttrs = new rosu.Performance({ mods: currentScore.mods, lazer: false }).calculate(map);
                         const currAttrs = new rosu.Performance({
                             mods: currentScore.mods, // Must be the same as before in order to use the previous attributes!
-                            misses: currentScore.statistics.count_miss,
+                            misses: currentScore.statistics.miss,
                             lazer: false,
                             accuracy: currentScore.accuracy * 100,
                             combo: currentScore.max_combo,
@@ -227,11 +227,11 @@ module.exports = {
                             const same = await aimScores.findOne({ where: {map_id: beatmap, user_id: currentScore.user_id, mods: mods, pp: (currAttrs.pp).toFixed(2)}})
                             if (currentScore.statistics.count_miss < aimScore.misscount) {
                                 aimScore.misscount = currentScore.statistics.count_miss;
-                                aimScore.score = currentScore.score;
+                                aimScore.score = currentScore.total_score;
                                 aimScore.pp = (currAttrs.pp).toFixed(2);
                                 aimScore.accuracy = accuracy;
                                 aimScore.combo = currentScore.max_combo;
-                                aimScore.date = currentScore.created_at;
+                                aimScore.date = currentScore.ended_at;
                                 aimScore.hidden = hidden;
                                 console.log("updating misscount...")
                                 aimScore.save();
@@ -244,12 +244,12 @@ module.exports = {
                                     username: user.username,
                                     mods: mods,
                                     pp: (currAttrs.pp).toFixed(2),
-                                    score: currentScore.score,
+                                    score: currentScore.total_score,
                                     accuracy: accuracy,
-                                    misscount: currentScore.statistics.count_miss,
+                                    misscount: currentScore.statistics.miss,
                                     combo: currentScore.max_combo,
                                     max_combo: maxAttrs.state.maxCombo,
-                                    date: currentScore.created_at,
+                                    date: currentScore.ended_at,
                                     hidden: hidden,
                                     is_current: 0,
                                     required_dt: beatmapData.required_dt
@@ -265,12 +265,12 @@ module.exports = {
                                 username: user.username,
                                 mods: mods,
                                 pp: (currAttrs.pp).toFixed(2),
-                                score: currentScore.score,
+                                score: currentScore.total_score,
                                 accuracy: accuracy,
-                                misscount: currentScore.statistics.count_miss,
+                                misscount: currentScore.statistics.miss,
                                 combo: currentScore.max_combo,
                                 max_combo: maxAttrs.state.maxCombo,
-                                date: currentScore.created_at,
+                                date: currentScore.ended_at,
                                 hidden: hidden,
                                 is_current: 0,
                                 required_dt: beatmapData.required_dt

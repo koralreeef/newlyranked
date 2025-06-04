@@ -163,7 +163,7 @@ module.exports = {
             let mods = "+NM";
             let hidden = false;
             if (currentScore.mods.includes("HR")) mods = "+HR"
-            if (currentScore.mods.includes("DT")) mods = "+DT"
+            if (currentScore.mods.includes("DT") || currentScore.mods.includes("NC")) mods = "+DT"
             if (currentScore.mods.includes("HD")) hidden = true;
 
             const validMaps = await aimLists.findAll({

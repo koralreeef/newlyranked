@@ -94,7 +94,7 @@ async function calcLazerPP(score, map, total, modString) {
             adjustSettings = mod.settings;
             lazerMods = modString + "DA";
         }
-        if (mod.acronym === "DT") {
+        if (mod.acronym === "DT" || mod.acronym === "NC") {
             dt = true;
             rate = 1.5;
             clockSettings = mod.settings;
@@ -424,7 +424,7 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
     if (modArray.includes("HD")) {
         hidden = true
     }
-    if (modArray.includes("DT")) {
+    if (modArray.includes("DT") || modArray.includes("NC")) {
         mods = mods + "DT";
     }
     if (modArray.includes("HR")) {
@@ -698,7 +698,7 @@ module.exports = {
             client_secret: clientSecret,
             cachedTokenPath: './test.json' // path to the file your auth token will be saved (to prevent osu!api spam)
         });
-        await interaction.deferReply();
+        await interaction.deferReply({ephemeral: true});
         let api = new Client(await getAccessToken());
         let usr = await osuUsers.findOne({ where: { user_id: interaction.user.id } });
         let p = true;
