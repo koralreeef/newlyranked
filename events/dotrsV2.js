@@ -1,6 +1,6 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole, hundoRole2 } = require('../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole, hundoRole2, ending } = require('../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../db/dbObjects.js');
 const { tools, v2, auth, v2_scores_list_user_firsts } = require('osu-api-extended')
@@ -68,12 +68,13 @@ function getLength(s) {
     if (seconds < 10) return minutes + ":0" + seconds;
     return minutes + ":" + seconds;
 }
-async function findMapStats(blob, beatmap, clockRate, cs) {
+async function findMapStats(blob, beatmap, clockRate, cs, mod) {
     const mapCS = "CS:  " + (cs).toFixed(2);
     const mapAR = "  AR:  " + (blob.stats.difficulty.ar).toFixed(2);
-    const mapOD = "  OD:  " + (beatmap.accuracy).toFixed(2);
+    //LOL
+    const mapOD = "  OD:  " + ((80-blob.stats.difficulty.greatHitWindow.toFixed(2))/6).toFixed(2);
     const mapBPM = "\nBPM:  " + (beatmap.bpm * clockRate).toFixed(2);
-    const mapLength = "  Length:  " + getLength(beatmap.hit_length);
+    const mapLength = "  Length:  " + getLength((beatmap.hit_length / clockRate).toFixed(0));
     return mapCS + mapAR + mapOD + mapBPM + mapLength;
 }
 async function calcLazerPP(score, map, total, modString) {
@@ -328,7 +329,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     }
     console.log(specialString);
 
-    let diffValues = await findMapStats(blob, beatmap, clockRate, cs);
+    let diffValues = await findMapStats(blob, beatmap, clockRate, cs, modString);
     let t = score.created_at;
     let date = Date.parse(t);
     let fcPPString = "~~(" + blob.fcPP + "pp)~~";
@@ -417,7 +418,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     return rsEmbed;
 }
 async function inputScore(blob, score, acc, modArray, message, lazer, details, api) {
-    //const epoch = Date.now();
+    const epoch = Date.now();
     //store two versions of best score
     //ugh thats so annoying man
     let accuracy = acc.toFixed(2)
@@ -462,14 +463,16 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
     let collectionName = "";
     let validMap;
     let dtCheck;
+    let hrCheck;
+    let dthrCheck;
     if(validMaps.length > 0){
         for(collection in validMaps){
             console.log("check check " + validMaps[collection].collection +"\nother collection check "+currentD2Collection)
-            if(validMaps[collection].collection == currentD2Collection){
+            if(validMaps[collection].collection == currentD2Collection && epoch < ending){
                 collectionName = currentD2Collection;
                 validMap = validMaps[collection]
             } 
-            else if(validMaps[collection].collection == currentD1Collection){
+            else if(validMaps[collection].collection == currentD1Collection && epoch < ending){
                 collectionName = currentD1Collection;
                 validMap = validMaps[collection]
             } else {
@@ -477,25 +480,42 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                 validMap = validMaps[collection]
             }
         }
-        dtCheck = !(validMap.required_dt && !mods.includes("+DT"))
+        dtCheck = !(validMap.required_dt && !mods.includes("DT"))
+        hrCheck = !(validMap.required_hr && !mods.includes("HR"))
     }
     //console.log(collectionName)
     //console.log(validMaps)
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, mods: mods },
     });
-    console.log("check check" + validMap +"\ndt check "+dtCheck)
+    console.log("\ndt check "+dtCheck)
+    console.log("\nhr check "+hrCheck)
     //check for time later
     //add patch from test2.js for storing multiple scores
-    if (validMap && score.passed && dtCheck) {
+    if (validMap && score.passed && dtCheck && hrCheck) {
         let dt = false;
+        let hr = false;
+        let dthr = false;
         let currentCollection = await aimLists.count({
             where: { collection: collectionName, required_dt: false },
         });
-        if(mods.includes("+DT")){
+        console.log(mods + " " + mods.includes("DTHR"))
+        if(mods.includes("DTHR")){
+            dthr = true;
+            currentCollection = await aimLists.count({
+            where: { collection: collectionName, required_dt: true, required_hr: true },
+        });
+        }
+        else if(mods.includes("DT")){
             dt = true;
             currentCollection = await aimLists.count({
             where: { collection: collectionName, required_dt: true },
+        });
+        }
+        else if(mods.includes("HR")){
+            hr = true;
+            currentCollection = await aimLists.count({
+            where: { collection: collectionName, required_hr: true },
         });
         }
         if (aimScore) {
@@ -557,7 +577,8 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                     date: score.created_at,
                     hidden: hidden,
                     is_current: 0,
-                    required_dt: validMap.required_dt
+                    required_dt: validMap.required_dt,
+                    required_hr: validMap.required_hr,
                 });
                 const string = "gained **" + Math.abs(diff).toFixed(2) + "** pp! (" + aimScore.pp + " -> " + blob.currPP + ")"
                 return string
@@ -598,7 +619,8 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
                 date: score.created_at,
                 hidden: hidden,
                 is_current: 0,
-                required_dt: validMap.required_dt
+                required_dt: validMap.required_dt,
+                required_hr: validMap.required_hr,
             });
             const scores = await aimScores.findAll({
                 where: { map_id: score.beatmap.id, collection: collectionName },
@@ -910,7 +932,7 @@ module.exports = {
                     let progress = "@" + Math.round(percentage) + "%";
                     if (percentage == 100) progress = "";
                     //console.log(score);
-                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message, lazer, ppData.details, api)
+                    const leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message, lazer, ppData.details, api) ?? ""
                     const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                     message.channel.send({ content: leaderboardString, embeds: [rsEmbed] });
                 } catch (err) {

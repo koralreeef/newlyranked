@@ -66,12 +66,22 @@ module.exports = {
                 if (mapset.length > 0) {
                     for (mapID in mapset) {
                         let requiredDT = false;
+                        let requiredHR = false;
                         let current = mapset[mapID]
-                        if (current.includes(" +DT")){
+                        if (current.includes(" +DTHR")){
+                            current = current.substring(0, current.indexOf(" +DTHR"))
+                            requiredDT = true;
+                            requiredHR = true;
+                        }
+                        else if (current.includes(" +DT")){
                             current = current.substring(0, current.indexOf(" +DT"))
                             requiredDT = true;
                         }
-                        console.log(current+", "+requiredDT)
+                        else if (current.includes(" +HR")){
+                            current = current.substring(0, current.indexOf(" +HR"))
+                            requiredHR = true;
+                        }
+                        //console.log(current+", "+requiredDT)
                         let beatmap;
                         try {
                             beatmap = await api.beatmaps.getBeatmap(current);
@@ -85,6 +95,7 @@ module.exports = {
                             console.log(err)
                             return message.channel.send("use /osuset before registering maps in the collection");
                         }
+                        console.log(beatmap.id);
                         const map = await aimLists.findOne({ where: { map_id: beatmap.id } })
                         if (map) {
                             if(map.collection == collectionName){
@@ -92,6 +103,7 @@ module.exports = {
                             } else {
                                 map.collection = collectionName;
                                 map.required_dt = requiredDT;
+                                map.required_hr = requiredHR;
                                 map.save();
                             }
                             newMaps.push(map)
@@ -107,7 +119,8 @@ module.exports = {
                                 creator: beatmap.beatmapset.creator,
                                 creatorID: beatmap.beatmapset.user_id,
                                 is_current: is_current,
-                                required_dt: requiredDT
+                                required_dt: requiredDT,
+                                required_hr: requiredHR
                             })
                             newMaps.push(newMap)
                             if(requiredDT) {

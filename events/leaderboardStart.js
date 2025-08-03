@@ -16,7 +16,7 @@ async function buildEmbed(ind, toggle, backward, forward) {
     const collectionName = divName
     let userString = "";
     let special = "";
-    ending = "season 1 ends <t:1749859200:R>"
+    ending = "season 2 ended <t:1753142400:R>"
     for (id in userIDs) {
         let total = 0;
         let totalMaps = 0;
@@ -177,14 +177,14 @@ async function buildEmbed(ind, toggle, backward, forward) {
             .setAuthor({ name: "Leaderboard for: " + collectionName + "\nno misscount leader yet!", iconURL: "https://a.ppy.sh" })
             .setDescription("no plays yet this season :(")
             .setColor(lightskyblue)
-            .setFooter({ text: "season theme: sped up songs\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: " + mode });
+            .setFooter({ text: "season theme: aim control\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: " + mode });
         return scoreEmbed;
     }
     const scoreEmbed = new EmbedBuilder()
         .setAuthor({ name: "Leaderboard for: " + collectionName + "\nCurrent " + measure + " leader: " + validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
         .setDescription(userString)
         .setColor(lightskyblue)
-        .setFooter({ text: "season theme: whitecat 2020 yt\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: " + mode });
+        .setFooter({ text: "season theme: aim control\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: " + mode });
     return scoreEmbed;
 }
 
@@ -201,7 +201,7 @@ async function sortByMod(mod, toggle, ind, backward, forward) {
     const collectionName = divName
     let userString = "";
     let special = "";
-    ending = "season 1 ends <t:1749859200:R>"
+    ending = "season 2 ends <t:1753142400:R>"
     for (id in userIDs) {
         let total = 0;
         const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, collection: divName, mods: mod, required_dt: dt } })
@@ -296,14 +296,14 @@ async function sortByMod(mod, toggle, ind, backward, forward) {
             .setAuthor({ name: "Leaderboard for: " + collectionName + "\nno misscount leader yet!", iconURL: "https://a.ppy.sh" })
             .setDescription("no plays yet this season :(")
             .setColor(lightskyblue)
-            .setFooter({ text: "season theme: sped up songs\nlast updated " + d.toUTCString() + "\ncurrent mod: " + mod + "\ncurrent leaderboard: " + mode });
+            .setFooter({ text: "season theme: whitecat 2020 yt\nlast updated " + d.toUTCString() + "\ncurrent mod: " + mod + "\ncurrent leaderboard: " + mode });
         return scoreEmbed;
     }
     const scoreEmbed = new EmbedBuilder()
         .setAuthor({ name: mod.substring(1) + " Leaderboard for: " + collectionName + "\nCurrent " + measure + " leader: " + validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
         .setDescription(userString)
         .setColor(lightskyblue)
-        .setFooter({ text: "season theme: sped up songs\nlast updated " + d.toUTCString() + "\ncurrent mod: " + mod + "\ncurrent leaderboard: " + mode });
+        .setFooter({ text: "season theme: whitecat 2020 yt\nlast updated " + d.toUTCString() + "\ncurrent mod: " + mod + "\ncurrent leaderboard: " + mode });
     return scoreEmbed;
 }
 
@@ -329,6 +329,7 @@ module.exports = {
         const dt = new ButtonBuilder()
             .setCustomId("dt" + epoch)
             .setLabel("dt only")
+            .setDisabled(true)
             .setStyle(ButtonStyle.Secondary);
 
         const toggle = new ButtonBuilder()

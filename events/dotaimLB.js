@@ -135,10 +135,12 @@ async function buildFull(map, ind, user, m) {
 }
 
 async function buildEmbed(map, ind, maxIndex, user) {
-  let dt = ""
-  if (map.required_dt) dt = "+DT"
+  let mods = ""
+  if (map.required_hr && map.required_dt) mods = "+DTHR"
+  else if (map.required_dt) mods = "+DT"
+  else if (map.required_hr) mods = "+HR"
   //console.log(map)
-  const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "] " + dt
+  const mapInfo = map.artist + " - " + map.title + " [" + map.difficulty + "] " + mods
   let name = "no misscount leader yet!"
   let iconLink = ""
   let pageNum = Number(ind) + 1;

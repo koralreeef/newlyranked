@@ -15,7 +15,7 @@ async function buildEmbed(toggle) {
   const collectionName = collection[0].collection
   let userString = "";
   let special = "";
-  ending = "season 1 ends <t:1749859200:R>"
+  ending = "season 2 ended <t:1753142400:R>"
   for (id in userIDs) {
     let total = 0;
     let totalMaps = 0;
@@ -40,13 +40,14 @@ async function buildEmbed(toggle) {
       while (processing) {
         //ehhhhhhhhhhhhhhhhh
         let dt = false;
-        let scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM", required_dt: false }, order: [["misscount", "asc"]] })
+        let scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM", required_dt: false, required_hr: false }, order: [["misscount", "asc"]] })
         if (!scoreNM) {
-          scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DT", required_dt: true }, order: [["misscount", "asc"]] })
+          scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DT", required_dt: true, required_hr: false }, order: [["misscount", "asc"]] })
           console.log("dt score")
           if (scoreNM) dt = true
         }
-        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR", required_dt: false }, order: [["misscount", "asc"]] })
+        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR", required_dt: false, required_hr: true }, order: [["misscount", "asc"]] })
+        const scoreDTHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DTHR", required_dt: true, required_hr: true }, order: [["misscount", "asc"]] })
         if (scoreNM && scoreHR && !dt) {
           totalMaps++;
           if (scoreNM.misscount > scoreHR.misscount) {
@@ -68,9 +69,12 @@ async function buildEmbed(toggle) {
             totalMaps++;
             total = total + scoreHR.misscount
             hrMaps++;
+          } else if (scoreDTHR) {
+            totalMaps++;
+            total = total + scoreDTHR.misscount
+            dtMaps++;
           }
         }
-        //console.log(totalMaps)
         if (totalMaps == unique.length) processing = false;
       }
       special = "(" + nmMaps + " NM/" + hrMaps + " HR"
@@ -117,7 +121,7 @@ async function buildEmbed(toggle) {
     .setAuthor({ name: "Leaderboard for: " + collectionName + "\nCurrent misscount leader: " + validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
     .setDescription(userString)
     .setColor(lightskyblue)
-    .setFooter({ text: "season theme: whitecat 2020 yt\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount" });
+    .setFooter({ text: "season theme: aim control\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount" });
   //console.log("dfsdf")
   //console.log(scoreEmbed)
   return scoreEmbed;
