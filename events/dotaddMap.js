@@ -10,11 +10,13 @@ async function buildEmbed(maps) {
     let mapArray = "";
     
     for (map in maps) {
-        let dt = "";
+        let mods = "";
         current = maps[map];
-        if(current.required_dt) dt = " +DT"
+        if(current.required_hr) mods = " +HR"
+        if(current.required_dt) mods = " +DT"
+        if(current.required_hr && current.required_dt) mods = " +DTHR"
         const ind = Number(map) + 1
-        mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")"+dt+" **\n")
+        mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")"+mods+" **\n")
     }
     const scoreEmbed = new EmbedBuilder()
         .setDescription(mapArray)

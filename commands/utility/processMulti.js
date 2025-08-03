@@ -1,6 +1,6 @@
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, hundoRole } = require('../../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, hundoRole, ending } = require('../../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
@@ -173,11 +173,11 @@ module.exports = {
             if (validMaps.length > 0) {
                 for (collection in validMaps) {
                     console.log("check check " + validMaps[collection].collection + "\nother collection check " + currentD2Collection)
-                    if (validMaps[collection].collection == currentD2Collection) {
+                    if (validMaps[collection].collection == currentD2Collection && epoch < ending) {
                         collectionName = currentD2Collection;
                         beatmapData = validMaps[collection]
                     }
-                    else if (validMaps[collection].collection == currentD1Collection) {
+                    else if (validMaps[collection].collection == currentD1Collection && epoch < ending) {
                         collectionName = currentD1Collection;
                         beatmapData = validMaps[collection]
                     } else {
@@ -209,9 +209,11 @@ module.exports = {
                         if (!players.includes(user.username)) players.push(user.username)
                         let mods = "+NM";
                         let hidden = false;
-                        if (currentScore.mods.includes("HR")) mods = "+HR"
-                        if (currentScore.mods.includes("DT") || currentScore.mods.includes("NC")) mods = "+DT"
+                        if (currentScore.mods.includes("EZ")) return;
                         if (currentScore.mods.includes("HD")) hidden = true;
+                        if (currentScore.mods.includes("DTHR") || currentScore.mods.includes("NCHR")) { mods = "+DTHR" } 
+                        else if (currentScore.mods.includes("HR")) { mods = "+HR" }
+                        else if (currentScore.mods.includes("DT") || currentScore.mods.includes("NC")) { mods = "+DT" }
                         const maps = await aimScores.findOne({ where: { map_id: beatmap } })
                         const aimScore = await aimScores.findOne({ where: { user_id: user.osu_id, map_id: beatmap, mods: mods } })
                         const maxAttrs = new rosu.Performance({ mods: currentScore.mods, lazer: false }).calculate(map);
@@ -252,7 +254,8 @@ module.exports = {
                                     date: currentScore.ended_at,
                                     hidden: hidden,
                                     is_current: 0,
-                                    required_dt: beatmapData.required_dt
+                                    required_dt: beatmapData.required_dt,
+                                    required_hr: beatmapData.required_hr
                                 });
                                 console.log("adding new local...")
                             }
@@ -273,7 +276,8 @@ module.exports = {
                                 date: currentScore.ended_at,
                                 hidden: hidden,
                                 is_current: 0,
-                                required_dt: beatmapData.required_dt
+                                required_dt: beatmapData.required_dt,
+                                required_hr: beatmapData.required_hr
                             });
                         }
                         //console.log(user.username+": "+currentScore.score+" / mods: "+currentScore.mods+" / pp: "+

@@ -1,9 +1,10 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
-const { leaderboardChannel, leaderboardMessage, currentD1Collection, currentD2Collection, botID } = require('../config.json');
+const { leaderboardChannel, leaderboardMessage, currentD1Collection, currentD2Collection, botID, end, the } = require('../config.json');
 const { setDivToggle, getDivToggle, getPPToggle } = require('../helper.js');
 const { lightskyblue } = require("color-name");
-let ending = "";
+let ending = end;
+let theme = "high cs";
 
 async function buildEmbed(toggle) {
   console.log("poaaaop")
@@ -15,7 +16,6 @@ async function buildEmbed(toggle) {
   const collectionName = collection[0].collection
   let userString = "";
   let special = "";
-  ending = "season 2 ended <t:1753142400:R>"
   for (id in userIDs) {
     let total = 0;
     let totalMaps = 0;
@@ -121,7 +121,7 @@ async function buildEmbed(toggle) {
     .setAuthor({ name: "Leaderboard for: " + collectionName + "\nCurrent misscount leader: " + validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
     .setDescription(userString)
     .setColor(lightskyblue)
-    .setFooter({ text: "season theme: aim control\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount" });
+    .setFooter({ text: "season theme: "+theme+"\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount" });
   //console.log("dfsdf")
   //console.log(scoreEmbed)
   return scoreEmbed;

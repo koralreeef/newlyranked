@@ -1,6 +1,6 @@
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const { Client, calcModStat } = require('osu-web.js');
-const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, hundoRole } = require('../../config.json');
+const { clientIDv2, clientSecret, AccessToken, currentD1Collection, currentD2Collection, nmRole, hrRole, hundoRole, ending } = require('../../config.json');
 const { lightskyblue, gold, white } = require('color-name');
 const { osuUsers, aimLists, aimScores } = require('../../db/dbObjects.js');
 const { tools, v2, auth } = require('osu-api-extended')
@@ -30,7 +30,8 @@ async function misscount(osu_id, divName) {
             unique.push(scores[score])
         }
     }
-         let processing = true
+    let processing = true
+    if(unique.length < 1) processing = false;
       while (processing) {
         //ehhhhhhhhhhhhhhhhh
         let dt = false;
@@ -88,7 +89,7 @@ module.exports = {
         //show misscount change (if any), show mapcount change (if any)
         await interaction.deferReply({ ephemeral: ephemeral });
         const epoch = Date.now();
-
+        const ending = 1753142400;
         const api = new Client(await getAccessToken());
         let scores;
         try {
@@ -162,9 +163,11 @@ module.exports = {
             const beatmapID = currentScore.beatmap.id
             let mods = "+NM";
             let hidden = false;
-            if (currentScore.mods.includes("HR")) mods = "+HR"
-            if (currentScore.mods.includes("DT") || currentScore.mods.includes("NC")) mods = "+DT"
+            if (currentScore.mods.includes("EZ")) return;
             if (currentScore.mods.includes("HD")) hidden = true;
+            if (currentScore.mods.includes("DTHR") || currentScore.mods.includes("NCHR")) { mods = "+DTHR" } 
+            else if (currentScore.mods.includes("HR")) { mods = "+HR" }
+            else if (currentScore.mods.includes("DT") || currentScore.mods.includes("NC")) { mods = "+DT" }
 
             const validMaps = await aimLists.findAll({
                 where: { map_id: currentScore.beatmap.id }
@@ -249,7 +252,8 @@ module.exports = {
                             date: currentScore.created_at,
                             hidden: hidden,
                             is_current: 0,
-                            required_dt: validMap.required_dt
+                            required_dt: beatmapData.required_dt,
+                            required_hr: beatmapData.required_hr
                         });
                         console.log("adding new local...")
                     }
@@ -270,7 +274,8 @@ module.exports = {
                         date: currentScore.created_at,
                         hidden: hidden,
                         is_current: 0,
-                        required_dt: validMap.required_dt
+                        required_dt: beatmapData.required_dt,
+                        required_hr: beatmapData.required_hr
                     });
                 }
                 map.free();

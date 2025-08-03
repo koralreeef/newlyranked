@@ -16,13 +16,13 @@ async function buildEmbed(maps) {
     .setDescription(mapArray)
     .setColor(lightskyblue)
     .setFooter({ text: "shreddddddd" });
-  console.log(scoreEmbed)
+  console.log(scoreEmbed)  
   return scoreEmbed;
 }
 
 
 module.exports = {
-  name: Events.MessageCreate,
+  name: Events.MessageCreate,    
   async execute(message) {
     const msg = message.content;
     if (regex.test(msg)) {

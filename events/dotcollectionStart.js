@@ -1,8 +1,9 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { aimLists } = require('../db/dbObjects.js');
-const { collectionChannel, collectionMessage, currentD1Collection, currentD2Collection } = require('../config.json');
+const { collectionChannel, collectionMessage, currentD1Collection, currentD2Collection, end, the } = require('../config.json');
 const { lightskyblue } = require("color-name");
-let ending = "";
+let ending = end;
+let theme = "high cs";
 
 async function buildEmbed(toggle) {
   let maps;
@@ -26,9 +27,14 @@ async function buildEmbed(toggle) {
   let mapIDs = "";
   if (maps.length > 0) {
     for (map in maps) {
+        let mods = "";
+        current = maps[map];
+        if(current.required_hr) mods = " +HR"
+        if(current.required_dt) mods = " +DT"
+        if(current.required_hr && current.required_dt) mods = " +DTHR"
       current = maps[map];
       let ind = Number(map) + 1;
-      mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")**\n")
+      mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")"+mods+"**\n")
       mapIDs = mapIDs + current.map_id + "\n";
       if (map == 0) {
         collectionName = current.collection
@@ -36,12 +42,11 @@ async function buildEmbed(toggle) {
     }
   }
   //console.log(mapIDs)
-  ending = "season 1 ends <t:1749859200:R>"
   const scoreEmbed = new EmbedBuilder()
     .setAuthor({ name: "Current collection: " + collectionName })
     .setDescription(mapArray + "\nraw map IDs below; **click the top right of the window to copy the list**``` " + mapIDs + "```")
     .setColor(lightskyblue)
-    .setFooter({ text: "season theme: whitecat 2020 yt" });
+    .setFooter({ text: "season theme: "+theme });
   //console.log(scoreEmbed)
   return scoreEmbed;
 }

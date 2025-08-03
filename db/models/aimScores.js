@@ -48,6 +48,9 @@ module.exports = (sequelize, DataTypes) => {
 		required_dt: {
 			type: DataTypes.BOOLEAN,
 		},
+		required_hr: {
+			type: DataTypes.BOOLEAN,
+		},
 		past_season: {
 			type: DataTypes.INTEGER
 		},
