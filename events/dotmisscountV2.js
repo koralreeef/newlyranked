@@ -218,13 +218,17 @@ async function calcTotal(uID, c) {
         }
         let processing = true
         while (processing) {
-            const scoreNM = await aimScores.findOne({ where: { user_id: uID, map_id: unique[totalMaps].map_id, mods: "+NM" }, order: [["misscount", "ASC"]] })
-            const scoreHR = await aimScores.findOne({ where: { user_id: uID, map_id: unique[totalMaps].map_id, mods: "+HR" }, order: [["misscount", "ASC"]] })
-            const scoreDT = await aimScores.findOne({ where: { user_id: uID, map_id: unique[totalMaps].map_id, mods: "+DT" }, order: [["misscount", "ASC"]] })
-            const scoreDTHR = await aimScores.findOne({ where: { user_id: uID, map_id: unique[totalMaps].map_id, mods: "+DTHR" }, order: [["misscount", "ASC"]] })
+            const scoreNM = await aimScores.findOne({ where: { user_id: uID, collection: divName, map_id: unique[totalMaps].map_id, mods: "+NM" }, order: [["misscount", "ASC"]] })
+            const scoreHR = await aimScores.findOne({ where: { user_id: uID, collection: divName, map_id: unique[totalMaps].map_id, mods: "+HR" }, order: [["misscount", "ASC"]] })
+            const scoreDT = await aimScores.findOne({ where: { user_id: uID, collection: divName, map_id: unique[totalMaps].map_id, mods: "+DT" }, order: [["misscount", "ASC"]] })
+            const scoreDTHR = await aimScores.findOne({ where: { user_id: uID, collection: divName, map_id: unique[totalMaps].map_id, mods: "+DTHR" }, order: [["misscount", "ASC"]] })
             if (scoreNM && scoreHR) {
                 totalMaps++;
-                if (scoreNM.misscount > scoreHR.misscount) {
+                if (scoreHR.required_hr) {
+                    total = total + scoreHR.misscount
+                    hrMaps++;
+                }
+                else if (scoreNM.misscount > scoreHR.misscount) {
                     total = total + scoreHR.misscount
                     hrMaps++;
                 } else if (scoreNM.misscount < scoreHR.misscount) {

@@ -207,13 +207,19 @@ module.exports = {
                     if (currentScore.rank != "F" && user) {
                         if (!collections.includes(beatmapData.collection)) collections.push(beatmapData.collection)
                         if (!players.includes(user.username)) players.push(user.username)
+                        let base = "+";
                         let mods = "+NM";
                         let hidden = false;
-                        if (currentScore.mods.includes("EZ")) return;
-                        if (currentScore.mods.includes("HD")) hidden = true;
-                        if (currentScore.mods.includes("DTHR") || currentScore.mods.includes("NCHR")) { mods = "+DTHR" } 
-                        else if (currentScore.mods.includes("HR")) { mods = "+HR" }
-                        else if (currentScore.mods.includes("DT") || currentScore.mods.includes("NC")) { mods = "+DT" }
+                        for(const mod in currentScore.mods){
+                            base = base + currentScore.mods[mod].acronym
+                        }
+                        console.log(base)
+                        if (base.includes("EZ")) return;
+                        if (base.includes("HD")) hidden = true;
+                        if (base.includes("HR")) { mods = "+HR" }
+                        if (base.includes("DT") || base.includes("NC")) { mods = "+DT" }
+                        if (base.includes("HRDT") || base.includes("HRNC")) { mods = "+DTHR" } 
+                        
                         const maps = await aimScores.findOne({ where: { map_id: beatmap } })
                         const aimScore = await aimScores.findOne({ where: { user_id: user.osu_id, map_id: beatmap, mods: mods } })
                         const maxAttrs = new rosu.Performance({ mods: currentScore.mods, lazer: false }).calculate(map);
@@ -227,8 +233,9 @@ module.exports = {
                         let accuracy = (currentScore.accuracy * 100).toFixed(2)
                         if (aimScore) {
                             const same = await aimScores.findOne({ where: {map_id: beatmap, user_id: currentScore.user_id, mods: mods, pp: (currAttrs.pp).toFixed(2)}})
-                            if (currentScore.statistics.count_miss < aimScore.misscount) {
-                                aimScore.misscount = currentScore.statistics.count_miss;
+                            console.log(currentScore.statistics.miss + " " + aimScore.misscount)
+                            if (currentScore.statistics.miss < aimScore.misscount) {
+                                aimScore.misscount = currentScore.statistics.miss;
                                 aimScore.score = currentScore.total_score;
                                 aimScore.pp = (currAttrs.pp).toFixed(2);
                                 aimScore.accuracy = accuracy;
@@ -236,8 +243,10 @@ module.exports = {
                                 aimScore.date = currentScore.ended_at;
                                 aimScore.hidden = hidden;
                                 console.log("updating misscount...")
-                                aimScore.save();
-                            } else if (currAttrs.pp > aimScore.pp && !same) {
+                                aimScore.save();                    
+                            }
+                            //probably get rid of this code its not good
+                            /* else if (currAttrs.pp > aimScore.pp && !same) {
                                 await aimScores.create({
                                     map_id: beatmap,
                                     collection: collectionName,
@@ -259,7 +268,7 @@ module.exports = {
                                 });
                                 console.log("adding new local...")
                             }
-                        } else {
+                        } */ } else {
                             await aimScores.create({
                                 map_id: beatmap,
                                 collection: collectionName,

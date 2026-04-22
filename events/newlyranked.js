@@ -62,7 +62,7 @@ function findDT(beatmaps) {
 }
 
 const downloadFile = async (url, beatmapID) => {
-  const response = await undici.request("https:"+url);
+  const response = await undici.request(url);
   // TODO: You may want to check if response.statusCode is 200 (OK).
   const targetFile = fs.createWriteStream('./samples/'+beatmapID+'.mp3');
   await pipeline(response.body, targetFile);
@@ -81,12 +81,12 @@ module.exports = {
   name: Events.ClientReady,
   once: true,
   async execute(client) {
-    const targetChannel = client.channels.cache.get(targetThread);
+    const targetChannel = await client.channels.cache.get(targetThread);
 
     setInterval(async () => {
       // 3 (* actual beatmaps) api call(s) (+however many dtable beatmaps) every 60s
       // HOW TO FIX THE DOUBLEPOSTING
-      const ms = Date.now() - 59 * 1000;
+      const ms = Date.now() - 90009 * 1000;
       const date = new Date(ms);
       let firstMap = true;
       const startTimestamp = Math.floor(Date.now() / 1000);
@@ -95,7 +95,6 @@ module.exports = {
         const beatmaps = await legacyApi.getBeatmaps({
           m: "0",
           since: date,
-          //s: 2194372,
           limit: 100,
         });
         if (arrayExists(beatmaps)) {
@@ -270,5 +269,6 @@ module.exports = {
     }, 60001);
 
     console.log(`${client.user.tag} connected to api`);
+    console.log(`${targetChannel} sending here`);
   },
 };

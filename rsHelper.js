@@ -61,7 +61,9 @@ function getLength(s) {
     return minutes + ":" + seconds;
 }
 async function findMapStats(blob, beatmap, clockRate, cs, mod) {
-    const mapCS = "CS:  " + (cs).toFixed(2);
+    let correctCS = (cs).toFixed(2);
+    if(correctCS > 10) correctCS = 10;
+    const mapCS = "CS:  " + correctCS;
     const mapAR = "  AR:  " + (blob.stats.difficulty.ar).toFixed(2);
     //LOL
     const mapOD = "  OD:  " + ((80-blob.stats.difficulty.greatHitWindow.toFixed(2))/6).toFixed(2);
@@ -429,6 +431,11 @@ async function inputScore(blob, score, acc, modArray, message, lazer, details, a
     }
     if(mods === "+"){
         mods = mods + "NM";
+    }
+    //SOOOO BADDD
+    if(score.beatmap.id == "4548498"){
+        console.log("hi")
+        mods = "+NM";
     }
     if (lazer) {
         const banned = ["DA", "DC", "HT"]

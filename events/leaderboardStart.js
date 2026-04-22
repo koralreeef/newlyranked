@@ -43,62 +43,51 @@ async function buildEmbed(ind, toggle, backward, forward) {
             }
             //console.log(mapIDs)
             let processing = true
-            while (processing) {
-                //ehhhhhhhhhhhhhhhhh
-                let dt = false;
-                let scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM", required_dt: false}, order: [[measure, sort]] })
-                if (!scoreNM) {
-                    scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DT", required_dt: true}, order: [[measure, sort]] })
-                    if (scoreNM) dt = true
-                }
-                const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR", required_dt: false}, order: [[measure, sort]] })
-                if (scoreNM && scoreHR && !dt) {
-                    totalMaps++;
-                    if (scoreNM.misscount > scoreHR.misscount) {
-                        if (board) {
-                            total = total + scoreHR.pp
-                        } else {
-                            total = total + scoreHR.misscount
-                        }
-                        hrMaps++;
-                    } else if (scoreNM.misscount < scoreHR.misscount) {
-                        if (board) {
-                            total = total + scoreNM.pp
-                        } else {
-                            total = total + scoreNM.misscount
-                        }
-                        nmMaps++;
-                    } else if (scoreNM.misscount == scoreHR.misscount) {
-                        if (board) {
-                            total = total + scoreNM.pp
-                        } else {
-                            total = total + scoreNM.misscount
-                        }
-                        hrMaps++;
-                    }
-                } else {
-                    if (scoreNM) {
-                        totalMaps++;
-                        if (board) {
-                            total = total + scoreNM.pp
-                        } else {
-                            total = total + scoreNM.misscount
-                        }
-                        if (dt) { dtMaps++ } else { nmMaps++; }
-                    } else if (scoreHR) {
-                        totalMaps++;
-                        if (board) {
-                            total = total + scoreHR.pp
-                        } else {
-                            total = total + scoreHR.misscount
-                        }
-                        hrMaps++;
-                    } else {
-
-                    }
-                }
-                if (totalMaps == unique.length) processing = false;
-            }
+      while (processing) {
+        //ehhhhhhhhhhhhhhhhh
+        let dt = false;
+        let scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM", required_dt: false, required_hr: false }, order: [["misscount", "asc"]] })
+        if (!scoreNM) {
+          scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DT", required_dt: true, required_hr: false }, order: [["misscount", "asc"]] })
+          //console.log("dt score")
+          if (scoreNM) dt = true
+        }
+        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR", required_dt: false, required_hr: true }, order: [["misscount", "asc"]] })
+        const scoreDTHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DTHR", required_dt: true, required_hr: true }, order: [["misscount", "asc"]] })
+        if (scoreNM && scoreHR && !dt) {
+          totalMaps++;
+          if (scoreHR.required_hr) {
+                    total = total + scoreHR.misscount
+                    hrMaps++;
+          }
+          else if (scoreNM.misscount > scoreHR.misscount) {
+            total = total + scoreHR.misscount
+            hrMaps++;
+          } else if (scoreNM.misscount < scoreHR.misscount) {
+            total = total + scoreNM.misscount
+            nmMaps++;
+          } else if (scoreNM.misscount == scoreHR.misscount) {
+            total = total + scoreNM.misscount
+            hrMaps++;
+          }
+        } else {
+          if (scoreNM) {
+            totalMaps++;
+            total = total + scoreNM.misscount
+            if (dt) { dtMaps++ } else { nmMaps++; }
+          } else if (scoreHR) {
+            totalMaps++;
+            total = total + scoreHR.misscount
+            hrMaps++;
+          } else if (scoreDTHR) {
+            totalMaps++;
+            total = total + scoreDTHR.misscount
+            dtMaps++;
+          }
+        }
+        //console.log(totalMaps + " " + unique.length)
+        if (totalMaps == unique.length) processing = false;
+      }
             special = "(" + nmMaps + " NM/" + hrMaps + " HR"
             //ITS TERRIBLE BRO FIX THIS
             if(nmMaps == 0) special = "(" + hrMaps + " HR"
@@ -236,7 +225,7 @@ async function sortByMod(mod, toggle, ind, backward, forward) {
                 misscount: total,
             }
             validUsers.push(leaderboardMap)
-            //console.log(leaderboardMap)
+            console.log(leaderboardMap)
             //console.log(userIDs[id].username+": NM: "+nmMisscount+"x"+nmAsterik+", HR: "+hrMisscount+"x"+hrAsterik)
             //console.log("maps played: "+mapsPlayed+"; "+scoresNM.length+"/"+scoresHR.length+" NM/HR plays")
         }

@@ -17,6 +17,7 @@ async function buildEmbed(toggle) {
   let userString = "";
   let special = "";
   for (id in userIDs) {
+    //console.log(userIDs[id])
     let total = 0;
     let totalMaps = 0;
     let nmMaps = 0;
@@ -43,14 +44,18 @@ async function buildEmbed(toggle) {
         let scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM", required_dt: false, required_hr: false }, order: [["misscount", "asc"]] })
         if (!scoreNM) {
           scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DT", required_dt: true, required_hr: false }, order: [["misscount", "asc"]] })
-          console.log("dt score")
+          //console.log("dt score")
           if (scoreNM) dt = true
         }
         const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR", required_dt: false, required_hr: true }, order: [["misscount", "asc"]] })
         const scoreDTHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DTHR", required_dt: true, required_hr: true }, order: [["misscount", "asc"]] })
         if (scoreNM && scoreHR && !dt) {
           totalMaps++;
-          if (scoreNM.misscount > scoreHR.misscount) {
+          if (scoreHR.required_hr) {
+                    total = total + scoreHR.misscount
+                    hrMaps++;
+          }
+          else if (scoreNM.misscount > scoreHR.misscount) {
             total = total + scoreHR.misscount
             hrMaps++;
           } else if (scoreNM.misscount < scoreHR.misscount) {
@@ -75,6 +80,7 @@ async function buildEmbed(toggle) {
             dtMaps++;
           }
         }
+        //console.log(totalMaps + " " + unique.length)
         if (totalMaps == unique.length) processing = false;
       }
       special = "(" + nmMaps + " NM/" + hrMaps + " HR"
