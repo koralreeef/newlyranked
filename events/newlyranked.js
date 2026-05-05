@@ -86,7 +86,7 @@ module.exports = {
     setInterval(async () => {
       // 3 (* actual beatmaps) api call(s) (+however many dtable beatmaps) every 60s
       // HOW TO FIX THE DOUBLEPOSTING
-      const ms = Date.now() - 90009 * 1000;
+      const ms = Date.now() - 59 * 1000;
       const date = new Date(ms);
       let firstMap = true;
       const startTimestamp = Math.floor(Date.now() / 1000);

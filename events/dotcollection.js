@@ -32,7 +32,7 @@ async function buildEmbed(maps) {
 module.exports = {
   name: Events.MessageCreate,
   async execute(message) {
-    const msg = message.content;
+    const msg = '';
     if (regex.test(msg.substring(0, 11))) {
       let collectionName = msg.substring(12)
       let maps = await aimLists.findAll({

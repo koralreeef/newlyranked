@@ -10,5 +10,7 @@ const sequelize = new Sequelize('database', 'username', 'password', {
 const osuUsers = require('./models/osuUsers.js')(sequelize, Sequelize.DataTypes);
 const aimScores = require('./models/aimScores.js')(sequelize, Sequelize.DataTypes);
 const aimLists = require('./models/aimLists.js')(sequelize, Sequelize.DataTypes);
+const currentSeasons = require('./models/currentSeasons.js')(sequelize, Sequelize.DataTypes);
+const seasonScores = require('./models/seasonScores.js')(sequelize, Sequelize.DataTypes);
 
-module.exports = { osuUsers, aimScores, aimLists };
+module.exports = { osuUsers, aimScores, aimLists, currentSeasons, seasonScores };

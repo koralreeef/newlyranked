@@ -2,8 +2,8 @@ const { EmbedBuilder } = require('discord.js');
 const { calcModStat } = require('osu-web.js');
 const { clientIDv2, clientSecret, currentD1Collection, currentD2Collection, nmRole, hrRole, nmRole2, hrRole2, hundoRole, hundoRole2, ending } = require('./config.json');
 const { lightskyblue, gold, white } = require('color-name');
-const { osuUsers, aimLists, aimScores, seasonScores, currentSeasons } = require('./db/dbObjects.js');
-const { tools, v2, auth } = require('osu-api-extended')
+const { osuUsers, aimLists, aimScores } = require('./db/dbObjects.js');
+const { tools, v2, auth} = require('osu-api-extended')
 const { hr, ez } = calcModStat;
 const rosu = require("rosu-pp-js");
 
@@ -12,7 +12,7 @@ async function createLeaderboard(api, id, user) {
     const unique = []
     const unfiltered = await aimLists.findAll()
     for (entry in unfiltered) {
-        if (!unique.includes(unfiltered[entry].creatorID)) {
+        if (!unique.includes(unfiltered[entry].creatorID)){ 
             unique.push(unfiltered[entry].creatorID)
         }
     }
@@ -62,11 +62,11 @@ function getLength(s) {
 }
 async function findMapStats(blob, beatmap, clockRate, cs, mod) {
     let correctCS = (cs).toFixed(2);
-    if (correctCS > 10) correctCS = 10;
+    if(correctCS > 10) correctCS = 10;
     const mapCS = "CS:  " + correctCS;
     const mapAR = "  AR:  " + (blob.stats.difficulty.ar).toFixed(2);
     //LOL
-    const mapOD = "  OD:  " + ((80 - blob.stats.difficulty.greatHitWindow.toFixed(2)) / 6).toFixed(2);
+    const mapOD = "  OD:  " + ((80-blob.stats.difficulty.greatHitWindow.toFixed(2))/6).toFixed(2);
     const mapBPM = "\nBPM:  " + (beatmap.bpm * clockRate).toFixed(2);
     const mapLength = "  Length:  " + getLength((beatmap.hit_length / clockRate).toFixed(0));
     return mapCS + mapAR + mapOD + mapBPM + mapLength;
@@ -104,10 +104,10 @@ async function calcLazerPP(score, map, total, modString) {
     }
     if (dt) {
         console.log(clockSettings)
-        if (clockSettings) {
+        if (clockSettings){
             if (clockSettings.speed_change != 1.5)
                 rate = clockSettings.speed_change;
-            lazerMods = lazerMods + " (" + clockSettings.speed_change + "x)";
+                lazerMods = lazerMods + " (" + clockSettings.speed_change + "x)";
         }
     }
     //console.log(details);
@@ -199,9 +199,9 @@ async function calcPP(score, map, total, modString) {
     let clockRate = 1;
     let cs = map.cs;
     const hits = {
-        ok: score.statistics.ok ?? 0,
-        great: score.statistics.great ?? 0,
-        meh: score.statistics.meh ?? 0,
+        ok: score.statistics.count_100 ?? 0,
+        great: score.statistics.count_300 ?? 0,
+        meh: score.statistics.count_50 ?? 0,
         miss: score.statistics.miss ?? 0,
     }
     if (modString.includes("DT"))
@@ -213,7 +213,6 @@ async function calcPP(score, map, total, modString) {
     if (modString.includes("EZ"))
         cs = ez.cs(cs);
     const sc = tools.calculate_accuracy(hits, total, 'osu', false);
-    console.log(score);
     const maxAttrs = new rosu.Performance({ mods: modString, lazer: false }).calculate(map);
     const maxPP = (maxAttrs.pp).toFixed(2);
     if (!score.passed) {
@@ -293,9 +292,8 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
     } else {
         leaderboardMods = "+NM"
     }
-    console.log(score.rank);
     switch (score.rank) {
-        case "XH":
+        case "SSH":
             rank = "<:sshidden:1324402826255929407>"
             break;
         case "SH":
@@ -323,19 +321,18 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
             rank = "<:frank:1324404867208450068>"
             break;
     }
-    if(progress != '') rank = "<:frank:1324404867208450068>";
     console.log(specialString);
 
     let diffValues = await findMapStats(blob, beatmap, clockRate, cs, modString);
-    let t = score.ended_at;
+    let t = score.created_at;
     let date = Date.parse(t);
     let fcPPString = "~~(" + blob.fcPP + "pp)~~";
     let collectionName = ""
     let collectionIndex = 0;
     let collectionLength = 0;
     let collectionString = "";
-    console.log(blob.fcPP)
     let timestamp = Math.floor(date / 1000); //remove last subtraction after dst
+
     const aimMap = await aimLists.findOne({ where: { map_id: beatmap.id } })
 
     if (aimMap) {
@@ -359,7 +356,7 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
                 let rank = 0;
                 const scores = await aimScores.findAll({ where: { map_id: beatmap.id, mods: leaderboardMods }, order: [["misscount", "ASC"]] })
                 const found = await aimScores.findOne({ where: { map_id: beatmap.id, mods: leaderboardMods, user_id: user.id } })
-                if (found) {
+                if(found){
                     while (checking) {
                         if (found.user_id == scores[i].user_id) {
                             rank = Number(i) + 1;
@@ -383,8 +380,8 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         collectionString = " map " + collectionIndex + "/" + collectionLength + " from " + collectionName
     }
 
-    if (Number(blob.fcPP) < Number(blob.currPP)) fcPPString = "";
-    const miss = score.statistics.miss ?? 0;
+    if (blob.fcPP < blob.currPP)
+        fcPPString = "";
     let rsEmbed = new EmbedBuilder()
         .setAuthor({
             name: "Most recent score by " + user.username + ":",
@@ -397,8 +394,8 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         .setThumbnail("https://b.ppy.sh/thumb/" + beatmapset.id + "l.jpg")
         .addFields(
             {
-                name: progress + " " + rank + " **" + modString + "**" + modleaderboardIndex + "  |  **" + score.max_combo + "x/**" + blob.stats.difficulty.maxCombo + "x  |  <t:" + timestamp + ":R>",
-                value: "**" + blob.currPP + "**/" + blob.maxPP + "PP " + fcPPString + " •  **" + String(accuracy) + "%** • " + miss + " <:miss:1324410432450068555>",
+                name: progress + " " + rank + " +**" + modString + "**" + modleaderboardIndex + "  |  **" + score.max_combo + "x/**" + blob.stats.difficulty.maxCombo + "x  |  <t:" + timestamp + ":R>",
+                value: "**" + blob.currPP + "**/" + blob.maxPP + "PP " + fcPPString + " •  **" + accuracy.toFixed(2) + "%** • " + score.statistics.miss + " <:miss:1324410432450068555>",
                 inline: false
             },
             {
@@ -414,10 +411,11 @@ async function generateRs(beatmap, blob, beatmapset, user, progress, modString, 
         });
     return rsEmbed;
 }
-async function inputScore(blob, score, acc, modArray, message, details, api) {
+async function inputScore(blob, score, acc, modArray, message, lazer, details, api) {
     const epoch = Date.now();
     //store two versions of best score
     //ugh thats so annoying man
+    let accuracy = acc.toFixed(2)
     let mods = "+"
     let hidden = false
     console.log(modArray)
@@ -431,13 +429,30 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
     if (modArray.includes("HR")) {
         mods = mods + "HR"
     }
-    if (mods === "+") {
+    if(mods === "+"){
         mods = mods + "NM";
     }
     //SOOOO BADDD
-    if (score.beatmap.id == "4548498") {
+    if(score.beatmap.id == "4548498"){
         console.log("hi")
         mods = "+NM";
+    }
+    if (lazer) {
+        const banned = ["DA", "DC", "HT"]
+        if (details) {
+            for (const mod of details.mods) {
+                if (banned.includes(mod.acronym)) return
+                if (mod.acronym === "CL") {
+                    console.log(mod.settings)
+                    for (key in mod.settings) {
+                        console.log("hey man")
+                        console.log(key)
+                        if (key === "classic_note_lock") return
+                    }
+                }
+            }
+        }
+        console.log("im through!!"+mods)
     }
 
     const added = await createLeaderboard(api, score.beatmap.id, score.user.username)
@@ -450,14 +465,14 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
     let dtCheck;
     let hrCheck;
     let dthrCheck;
-    if (validMaps.length > 0) {
-        for (collection in validMaps) {
-            console.log("check check " + validMaps[collection].collection + "\nother collection check " + currentD2Collection)
-            if (validMaps[collection].collection == currentD2Collection && epoch < ending) {
+    if(validMaps.length > 0){
+        for(collection in validMaps){
+            console.log("check check " + validMaps[collection].collection +"\nother collection check "+currentD2Collection)
+            if(validMaps[collection].collection == currentD2Collection && epoch < ending){
                 collectionName = currentD2Collection;
                 validMap = validMaps[collection]
-            }
-            else if (validMaps[collection].collection == currentD1Collection && epoch < ending) {
+            } 
+            else if(validMaps[collection].collection == currentD1Collection && epoch < ending){
                 collectionName = currentD1Collection;
                 validMap = validMaps[collection]
             } else {
@@ -473,8 +488,8 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
     const aimScore = await aimScores.findOne({
         where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, mods: mods },
     });
-    console.log("\ndt check " + dtCheck)
-    console.log("\nhr check " + hrCheck)
+    console.log("\ndt check "+dtCheck)
+    console.log("\nhr check "+hrCheck)
     //check for time later
     //add patch from test2.js for storing multiple scores
     if (validMap && score.passed && dtCheck && hrCheck) {
@@ -485,36 +500,36 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
             where: { collection: collectionName, required_dt: false },
         });
         console.log(mods + " " + mods.includes("DTHR"))
-        if (mods.includes("DTHR")) {
+        if(mods.includes("DTHR")){
             dthr = true;
             currentCollection = await aimLists.count({
-                where: { collection: collectionName, required_dt: true, required_hr: true },
-            });
+            where: { collection: collectionName, required_dt: true, required_hr: true },
+        });
         }
-        else if (mods.includes("DT")) {
+        else if(mods.includes("DT")){
             dt = true;
             currentCollection = await aimLists.count({
-                where: { collection: collectionName, required_dt: true },
-            });
+            where: { collection: collectionName, required_dt: true },
+        });
         }
-        else if (mods.includes("HR")) {
+        else if(mods.includes("HR")){
             hr = true;
             currentCollection = await aimLists.count({
-                where: { collection: collectionName, required_hr: true },
-            });
+            where: { collection: collectionName, required_hr: true },
+        });
         }
         if (aimScore) {
             console.log("existing score found")
-            const same = await aimScores.findOne({ where: { map_id: score.beatmap.id, user_id: score.user_id, mods: mods, pp: blob.currPP } })
+            const same = await aimScores.findOne({ where: {map_id: score.beatmap.id, user_id: score.user_id, mods: mods, pp: blob.currPP}})
             if (score.statistics.miss < aimScore.misscount) {
                 const diff = score.statistics.miss - aimScore.misscount;
                 const oldMisscount = aimScore.misscount;
-                aimScore.misscount = score.statistics.miss;
-                aimScore.score = score.legacy_total_score;
+                aimScore.misscount = score.statistics.count_miss;
+                aimScore.score = score.score;
                 aimScore.pp = blob.currPP;
-                aimScore.accuracy = acc;
+                aimScore.accuracy = accuracy;
                 aimScore.combo = score.max_combo;
-                aimScore.date = score.ended_at;
+                aimScore.date = score.created_at;
                 aimScore.hidden = hidden;
                 console.log("updating misscount...")
                 aimScore.save();
@@ -528,7 +543,7 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
                 let i = 0;
                 let rank = 0;
                 //CHANGE THIS
-                const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, date: score.ended_at }, order: [["misscount", "ASC"]] })
+                const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, date: score.created_at }, order: [["misscount", "ASC"]] })
                 while (checking) {
                     if (found.misscount <= scores[i].misscount) {
                         rank = Number(i) + 1;
@@ -540,7 +555,7 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
                     }
                     i++;
                 }
-                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + oldMisscount + " -> " + score.statistics.miss +
+                const string = "improved misscount by **" + Math.abs(diff) + "**! (" + oldMisscount + " -> " + score.statistics.count_miss +
                     ")\nnew leaderboard rank: **#" + rank + "**/" + scores.length
                 return string
             } else if (blob.currPP > aimScore.pp && !same) {
@@ -554,12 +569,12 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
                     username: score.user.username,
                     mods: mods,
                     pp: blob.currPP,
-                    score: score.legacy_total_score,
-                    accuracy: acc,
+                    score: score.score,
+                    accuracy: accuracy,
                     misscount: score.statistics.miss,
                     combo: score.max_combo,
                     max_combo: blob.stats.difficulty.maxCombo,
-                    date: score.ended_at,
+                    date: score.created_at,
                     hidden: hidden,
                     is_current: 0,
                     required_dt: validMap.required_dt,
@@ -576,7 +591,7 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
             }
             console.log("creating new score")
             const preEntry = await aimScores.findAll({
-                where: { user_id: score.user_id, collection: collectionName, mods: mods, required_dt: dt }
+                where: { user_id: score.user_id, collection: collectionName, mods: mods, required_dt: dt}
             })
             const uniquePreEntry = []
             const mapIDsPreEntry = []
@@ -596,12 +611,12 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
                 username: score.user.username,
                 mods: mods,
                 pp: blob.currPP,
-                score: score.legacy_total_score,
-                accuracy: acc,
+                score: score.score,
+                accuracy: accuracy,
                 misscount: score.statistics.miss,
                 combo: score.max_combo,
                 max_combo: blob.stats.difficulty.maxCombo,
-                date: score.ended_at,
+                date: score.created_at,
                 hidden: hidden,
                 is_current: 0,
                 required_dt: validMap.required_dt,
@@ -614,7 +629,7 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
                 ]
             })
             const complete = await aimScores.findAll({
-                where: { user_id: score.user_id, collection: collectionName, mods: mods, required_dt: dt }
+                where: { user_id: score.user_id, collection: collectionName, mods: mods, required_dt: dt}
             })
             const uniqueComplete = []
             const mapIDsComplete = []
@@ -628,32 +643,32 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
             console.log("asdad" + uniquePreEntry.length)
             console.log("asd" + uniqueComplete.length)
             let newmap = "";
-            if (added) {
+            if(added) {
                 newmap = " and map"
             }
             const mod = mods.substring(1)
-            let congrats = "logged new " + mod + " score" + newmap + " into " + validMap.collection + "!"
+            let congrats = "logged new " + mod + " score"+newmap+" into " + validMap.collection + "!"
             if ((collectionName == currentD1Collection || collectionName == currentD2Collection) && uniquePreEntry.length == currentCollection - 1 && uniqueComplete.length == currentCollection) {
-                const user = await osuUsers.findOne({ where: { osu_id: score.user_id } })
+                const user = await osuUsers.findOne({where: {osu_id: score.user_id}})
                 //redo conditionals for giving hundo role
                 //get guild member object from the user id from the score, not the message
                 if (collectionName == currentD1Collection) {
-                    if (mod.includes("DT")) { user.dt1 = true; }
-                    else if (mod.includes("NM")) { user.nm1 = true; }
-                    else if (mod == "HR") { user.hr1 = true; }
+                    if(mod.includes("DT")){ user.dt1 = true; }
+                    else if(mod.includes("NM")){ user.nm1 = true; }
+                    else if(mod == "HR"){ user.hr1 = true; }
                     user.save()
-                    if (user.nm1 && user.dt1 && user.hr1) {
+                    if(user.nm1 && user.dt1 && user.hr1){ 
                         congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉";
                         await message.member.roles.add(hundoRole).catch(console.error);
                     }
                     else if (user.nm1 && user.dt1) await message.member.roles.add(nmRole).catch(console.error);
                     else if (user.hr1) await message.member.roles.add(hrRole).catch(console.error);
                 } else if (collectionName == currentD2Collection) {
-                    if (mod.includes("DT")) { user.dt2 = true; }
-                    else if (mod.includes("NM")) { user.nm2 = true; }
-                    else if (mod == "HR") { user.hr2 = true; }
+                    if(mod.includes("DT")){ user.dt2 = true; }
+                    else if(mod.includes("NM")){ user.nm2 = true; }
+                    else if(mod == "HR"){ user.hr2 = true; }
                     user.save()
-                    if (user.nm2 && user.dt2 && user.hr2) {
+                    if(user.nm2 && user.dt2 && user.hr2){ 
                         congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉";
                         await message.member.roles.add(hundoRole2).catch(console.error);
                     }
@@ -665,15 +680,15 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
             let checking = true;
             let i = 0;
             let rank = 0;
-            const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, date: score.ended_at }, order: [["misscount", "ASC"]] })
-            while (checking) {
+            const found = await aimScores.findOne({ where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, date: score.created_at }, order: [["misscount", "ASC"]] })
+            while (checking) {     
                 if (scores.length == 1) {
                     rank = 1;
                     checking = false;
                 }
-                //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
+                 //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
                 else if (found.misscount <= scores[i].misscount) {
-                    const sameCount = await aimScores.count({ where: { map_id: score.beatmap.id, collection: collectionName, misscount: found.misscount } })
+                    const sameCount = await aimScores.count({ where: { map_id: score.beatmap.id, collection: collectionName, misscount: found.misscount }})
                     rank = Number(i) + sameCount;
                     checking = false;
                 }
@@ -688,212 +703,5 @@ async function inputScore(blob, score, acc, modArray, message, details, api) {
     }
 }
 
-async function inputSeasonScore(blob, score, acc, modArray, message, details, api, seasonMapFound, modsCounted, modString) {
-    const epoch = Date.now();
-    //store two versions of best score
-    //ugh thats so annoying man
-    const added = await createLeaderboard(api, score.beatmap.id, score.user.username);
-    const misscount = score.statistics.miss ?? 0
-    //IS THIS N OR IS THIS DIVINE INTELLECT 
-    const collectionName = seasonMapFound.collection;
-    const dthrCheck = !(seasonMapFound.required_mods == 3 && modsCounted == 3);
-    const dtCheck = !(seasonMapFound.required_mods == 2 && modsCounted == 2);
-    const hrCheck = !(seasonMapFound.required_mods == 1 && modsCounted == 1);
-    //console.log(collectionName)
-    //console.log(validMaps)
-    const existingScore = await seasonScores.findOne({
-        where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, mods: modString },
-    });
-    console.log("\ndt check " + dtCheck)
-    console.log("\nhr check " + hrCheck)
-    //check for time later
-    //add patch from test2.js for storing multiple scores
-    if (seasonMapFound && score.passed && dtCheck && hrCheck && dthrCheck) {
-        let dt = false;
-        let hr = false;
-        let dthr = false;
-        let currentCollection = await currentSeasons.count({
-            where: { collection: collectionName, required_mods: seasonMapFound.required_mods },
-        });
-    }
-    if (existingScore) {
-        console.log("existing score found")
-        const same = await seasonScores.findOne({ where: { map_id: score.beatmap.id, user_id: score.user_id, mods: modString } })
-        if (score.statistics.miss < same.misscount) {
-            console.log('go');
-            const diff = misscount - same.misscount;
-            const oldMisscount = existingScore.misscount;
-            existingScore.misscount = misscount ?? 0;
-            existingScore.score = score.legacy_total_score;
-            existingScore.pp = blob.currPP;
-            existingScore.accuracy = acc;
-            existingScore.combo = score.max_combo;
-            existingScore.date = score.ended_at;
-            console.log("updating misscount...")
-            existingScore.save();
-            const scores = await seasonScores.findAll({
-                where: { map_id: score.beatmap.id },
-                order: [
-                    ["misscount", "ASC"],
-                ]
-            })
-            let checking = true;
-            let i = 0;
-            let rank = 0;
-            //CHANGE THIS
-            const found = await seasonScores.findOne({ where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id }, order: [["misscount", "ASC"]] })
-            while (checking) {
-                console.log(i);
-                if (found.misscount <= scores[i].misscount) {
-                    rank = Number(i) + 1;
-                    checking = false;
-                }
-                if (i == scores.length - 1) {
-                    rank = Number(i) + 1;
-                    checking = false;
-                }
-                i++;
-            }
-            const string = "improved misscount by **" + Math.abs(diff) + "**! (" + oldMisscount + " -> " + score.statistics.miss +
-                ")\nnew leaderboard rank: **#" + rank + "**/" + scores.length
-            return string
-        } else if (blob.currPP > existingScore.pp && !same) {
-            //YOLO
-            const diff = blob.currPP - existingScore.pp;
-            await seasonScores.create({
-                map_id: score.beatmap.id,
-                collection: seasonMapFound.collection,
-                index: seasonMapFound.id,
-                user_id: score.user_id,
-                username: score.user.username,
-                mods: modString,
-                pp: blob.currPP,
-                score: score.legacy_total_score,
-                accuracy: acc,
-                misscount: misscount,
-                combo: score.max_combo,
-                max_combo: blob.stats.difficulty.maxCombo,
-                date: score.ended_at,
-                required_mods: modsCounted,
-                is_current: 0,
-            });
-            const string = "gained **" + Math.abs(diff).toFixed(2) + "** pp! (" + existingScore.pp + " -> " + blob.currPP + ")"
-            return string
-        }
-        return ""
-    } else {
-        console.log("creating new score")
-        const preEntry = await seasonScores.findAll({
-            where: { user_id: score.user_id, collection: collectionName, mods: modString }
-        })
-        const uniquePreEntry = []
-        const mapIDsPreEntry = []
-        for (s in preEntry) {
-            if (!mapIDsPreEntry.includes(preEntry[s].map_id)) {
-                mapIDsPreEntry.push(preEntry[s].map_id)
-                uniquePreEntry.push(preEntry[s].map_id)
-                //console.log(scores[score].map_id)
-            }
-        }
-        console.log(uniquePreEntry)
-        await seasonScores.create({
-            map_id: score.beatmap.id,
-            collection: seasonMapFound.collection,
-            index: seasonMapFound.id,
-            user_id: score.user_id,
-            username: score.user.username,
-            mods: modString,
-            pp: blob.currPP,
-            score: score.legacy_total_score,
-            accuracy: acc,
-            misscount: misscount,
-            combo: score.max_combo,
-            max_combo: blob.stats.difficulty.maxCombo,
-            date: score.ended_at,
-            required_mods: modsCounted,
-            is_current: 0,
-        });
-        const scores = await seasonScores.findAll({
-            where: { map_id: score.beatmap.id, collection: collectionName },
-            order: [
-                ["misscount", "ASC"],
-            ]
-        })
-        const complete = await seasonScores.findAll({
-            where: { user_id: score.user_id, collection: collectionName, mods: modString }
-        })
-        const uniqueComplete = []
-        const mapIDsComplete = []
-        for (e in complete) {
-            if (!mapIDsComplete.includes(complete[e].map_id)) {
-                mapIDsComplete.push(complete[e].map_id)
-                uniqueComplete.push(complete[e])
-                //console.log(scores[score].map_id)
-            }
-        }
-        console.log("asdad" + uniquePreEntry.length)
-        console.log("asd" + uniqueComplete.length)
-        let newmap = "";
-        if (added) {
-            newmap = " and map"
-        }
-        const mod = modString.substring(1)
-        let congrats = "logged new " + mod + " score" + newmap + " into " + seasonMapFound.collection + "!"
-        if ((collectionName == currentD1Collection || collectionName == currentD2Collection) && uniquePreEntry.length == currentCollection - 1 && uniqueComplete.length == currentCollection) {
-            const user = await osuUsers.findOne({ where: { osu_id: score.user_id } })
-            //redo conditionals for giving hundo role
-            //get guild member object from the user id from the score, not the message
-            if (collectionName == currentD1Collection) {
-                if (mod.includes("DT")) { user.dt1 = true; }
-                else if (mod.includes("NM")) { user.nm1 = true; }
-                else if (mod == "HR") { user.hr1 = true; }
-                user.save()
-                if (user.nm1 && user.dt1 && user.hr1) {
-                    congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉";
-                    await message.member.roles.add(hundoRole).catch(console.error);
-                }
-                else if (user.nm1 && user.dt1) await message.member.roles.add(nmRole).catch(console.error);
-                else if (user.hr1) await message.member.roles.add(hrRole).catch(console.error);
-            } else if (collectionName == currentD2Collection) {
-                if (mod.includes("DT")) { user.dt2 = true; }
-                else if (mod.includes("NM")) { user.nm2 = true; }
-                else if (mod == "HR") { user.hr2 = true; }
-                user.save()
-                if (user.nm2 && user.dt2 && user.hr2) {
-                    congrats = "🎉🎉🎉 congrats on 100% completion for " + validMap.collection + "!!! 🎉🎉🎉";
-                    await message.member.roles.add(hundoRole2).catch(console.error);
-                }
-                else if (user.nm2 && user.dt2) await message.member.roles.add(nmRole2).catch(console.error);
-                else if (user.hr2) await message.member.roles.add(hrRole2).catch(console.error);
-            }
-            //fix this
-        }
-        let checking = true;
-        let i = 0;
-        let rank = 1;
-        const found = await seasonScores.findOne({ where: { map_id: score.beatmap.id, collection: collectionName, user_id: score.user_id, date: score.ended_at }, order: [["misscount", "ASC"]] })
-        while (checking) {
-            if (scores.length == 1) {
-                rank = 1;
-                checking = false;
-            }
-            //SURELY THERES SOMETHING BETTER THAN THIS CONDITION
-            else if (found.misscount <= scores[i].misscount) {
-                const sameCount = await aimScores.count({ where: { map_id: score.beatmap.id, collection: collectionName, misscount: found.misscount } })
-                rank = Number(i) + sameCount;
-                checking = false;
-            }
-            else if (i == scores.length - 1) {
-                rank = Number(i) + 1;
-                checking = false;
-            }
-            i++;
-        }
-        return congrats + "\noverall leaderboard rank: **#" + rank + "**/" + scores.length
-    }
-}
-
-module.exports = {
-    createLeaderboard, getLength, findMapStats,
-    calcLazerPP, calcPP, generateRs, inputScore, inputSeasonScore
-};
+module.exports = { createLeaderboard, getLength, findMapStats,
+                    calcLazerPP, calcPP, generateRs, inputScore};

@@ -1,22 +1,23 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { Client } = require("osu-web.js");
 const { getAccessToken } = require('../helper.js');
-const { currentSeason, osuUsers } = require('../db/dbObjects.js');
+const { currentSeasons, osuUsers } = require('../db/dbObjects.js');
 const { lightskyblue } = require("color-name");
 
-const regex = /^\.addmap/gm;
+const div1 = /^\.addDivision1/gm;
+const div2 = /^\.addDivision2/gm;
 
 async function buildEmbed(maps) {
     let mapArray = "";
-    
+
     for (map in maps) {
         let mods = "";
         current = maps[map];
-        if(current.required_hr) mods = " +HR"
-        if(current.required_dt) mods = " +DT"
-        if(current.required_hr && current.required_dt) mods = " +DTHR"
+        if (current.required_mods == 1) mods = " +HR"
+        if (current.required_mods == 2) mods = " +DT"
+        if (current.required_mods == 3) mods = " +DTHR"
         const ind = Number(map) + 1
-        mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")"+mods+" **\n")
+        mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")" + mods + " **\n")
     }
     const scoreEmbed = new EmbedBuilder()
         .setDescription(mapArray)
@@ -35,11 +36,14 @@ module.exports = {
     name: Events.MessageCreate,
     async execute(message) {
         const api = new Client(await getAccessToken());
-        const msg = ''; //message.content
+        const msg = message.content;
         const array = msg.split("\n")
-        if (regex.test(msg)) {
+        if (div1.test(msg) || div2.test(msg)) {
             if (message.author.id == "109299841519099904" || message.author.id == "450478289107025920") {
-                let is_current = 1;
+                let division = 0;
+                if (msg.includes('addDivision1')){division = 1};
+                if (msg.includes('addDivision2')){division = 2};
+                console.log(division);
                 let collectionStr = 0
                 let mapID = "";
                 if (msg.indexOf("b=") == -1) {
@@ -55,9 +59,7 @@ module.exports = {
                 }
                 let collectionName = "";
                 if (msg.indexOf("c=") > 0) {
-                    is_current = 0;
                     collectionName = msg.substring(msg.indexOf("c=") + 2);
-                    if (collectionName.includes("D2")) is_current = 2;
                 }
                 console.log(collectionName)
                 const mapset = mapID.split("\n")
@@ -67,23 +69,21 @@ module.exports = {
                 console.log(mapset)
                 if (mapset.length > 0) {
                     for (mapID in mapset) {
-                        let requiredDT = false;
-                        let requiredHR = false;
+                        let requiredMods = 0;
                         let current = mapset[mapID]
-                        if (current.includes(" +DTHR")){
-                            current = current.substring(0, current.indexOf(" +DTHR"))
-                            requiredDT = true;
-                            requiredHR = true;
+                        if (current.includes(" 3")) {
+                            current = current.substring(0, current.indexOf(" 3"))
+                            requiredMods = 3;
                         }
-                        else if (current.includes(" +DT")){
-                            current = current.substring(0, current.indexOf(" +DT"))
-                            requiredDT = true;
+                        else if (current.includes(" 2")) {
+                            current = current.substring(0, current.indexOf(" 2"))
+                            requiredMods = 2;
                         }
-                        else if (current.includes(" +HR")){
-                            current = current.substring(0, current.indexOf(" +HR"))
-                            requiredHR = true;
+                        else if (current.includes(" 1")) {
+                            current = current.substring(0, current.indexOf(" 1"))
+                            requiredMods = 1
                         }
-                        //console.log(current+", "+requiredDT)
+                        //hr = 1, dt = 2, dthr = 3
                         let beatmap;
                         try {
                             beatmap = await api.beatmaps.getBeatmap(current);
@@ -98,19 +98,19 @@ module.exports = {
                             return message.channel.send("use /osuset before registering maps in the collection");
                         }
                         console.log(beatmap.id);
-                        const map = await currentSeason.findOne({ where: { map_id: beatmap.id } })
+                        if(!beatmap.id) return;
+                        const map = await currentSeasons.findOne({ where: { map_id: beatmap.id } })
                         if (map) {
-                            if(map.collection == collectionName){
-                            message.channel.send(current+" has already been added by " + map.adder + "!");
+                            if (map.collection == collectionName) {
+                                message.channel.send(current + " has already been added by " + map.adder + "!");
                             } else {
                                 map.collection = collectionName;
-                                map.required_dt = requiredDT;
-                                map.required_hr = requiredHR;
+                                map.required_mods = requiredMods;
                                 map.save();
                             }
                             newMaps.push(map)
                         } else {
-                            const newMap = await currentSeason.create({
+                            const newMap = await currentSeasons.create({
                                 map_id: current.trim(),
                                 set_id: beatmap.beatmapset_id,
                                 collection: collectionName,
@@ -120,22 +120,21 @@ module.exports = {
                                 artist: beatmap.beatmapset.artist,
                                 creator: beatmap.beatmapset.creator,
                                 creatorID: beatmap.beatmapset.user_id,
-                                is_current: is_current,
-                                required_dt: requiredDT,
-                                required_hr: requiredHR
+                                required_mods: requiredMods,
+                                division: division,
                             })
                             newMaps.push(newMap)
-                            if(requiredDT) {
+                            if (requiredMods > 1) {
                                 time = time + Number((beatmap.hit_length * 0.5).toFixed(0))
                             } else {
-                            time = time + beatmap.hit_length 
+                                time = time + beatmap.hit_length
                             }
                             difficulty = difficulty + beatmap.difficulty_rating
                         }
                     }
                     const newmaps = await buildEmbed(newMaps);
                     difficulty = (difficulty / mapset.length).toFixed(2)
-                    return await message.channel.send({ content: "added " + mapset.length + " map(s) to " + collectionName + "!\ntotal length: "+getLength(time)+"\naverage sr: "+difficulty+"*", embeds: [newmaps] })
+                    return await message.channel.send({ content: "added " + mapset.length + " map(s) to " + collectionName + "!\ntotal length: " + getLength(time) + "\naverage sr: " + difficulty + "*", embeds: [newmaps] })
                 } else {
                     return message.channel.send("wheres the maps buddy")
                 }

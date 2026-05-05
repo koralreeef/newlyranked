@@ -1,31 +1,40 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { aimLists, aimScores, osuUsers } = require('../db/dbObjects.js');
+const { aimLists, aimScores, osuUsers, currentSeasons, seasonScores } = require('../db/dbObjects.js');
 const { leaderboardChannel, leaderboardMessage, currentD1Collection, currentD2Collection, botID, end, the } = require('../config.json');
 const { setDivToggle, getDivToggle, getPPToggle } = require('../helper.js');
 const { lightskyblue } = require("color-name");
 let ending = end;
-let theme = "high cs";
+let theme = "none";
 
 async function buildEmbed(toggle) {
   console.log("poaaaop")
   const userIDs = await osuUsers.findAll()
-  let divName = currentD1Collection;
-  if (toggle) divName = currentD2Collection;
-  const collection = await aimLists.findAll({ where: { collection: divName } })
+  console.log(toggle)
+  let division = 1;
+  const board = toggle.pp;
+  if (toggle.div === 2) { division = 1 }
+  else if (toggle.div === 1) { division = 2 }
+  console.log(division);
+  const collection = await currentSeasons.findAll({ where: { division: 1 } })
+  const collectionName = collection[0].collection;
   const validUsers = []
-  const collectionName = collection[0].collection
   let userString = "";
   let special = "";
   for (id in userIDs) {
-    //console.log(userIDs[id])
     let total = 0;
     let totalMaps = 0;
     let nmMaps = 0;
     let hrMaps = 0;
     let dtMaps = 0;
-    const found = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, collection: divName } })
+    const found = await seasonScores.findOne({ where: { user_id: userIDs[id].osu_id } })
     if (found) {
-      const scores = await aimScores.findAll({ where: { user_id: userIDs[id].osu_id, collection: divName } })
+      let measure = "misscount";
+      let sort = "asc";
+      if (board) {
+        measure = "pp";
+        sort = "desc";
+      }
+      const scores = await seasonScores.findAll({ where: { user_id: userIDs[id].osu_id, collection: collection[0].collection }, order: [[measure, sort]] })
       const mapIDs = []
       const unique = []
       //???
@@ -33,27 +42,22 @@ async function buildEmbed(toggle) {
         if (!mapIDs.includes(scores[score].map_id)) {
           mapIDs.push(scores[score].map_id)
           unique.push(scores[score])
-          //console.log(unique[score].map_id+"/"+unique[score].misscount)
         }
       }
-
+      //console.log(mapIDs)
       let processing = true
       while (processing) {
         //ehhhhhhhhhhhhhhhhh
         let dt = false;
-        let scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+NM", required_dt: false, required_hr: false }, order: [["misscount", "asc"]] })
-        if (!scoreNM) {
-          scoreNM = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DT", required_dt: true, required_hr: false }, order: [["misscount", "asc"]] })
-          //console.log("dt score")
-          if (scoreNM) dt = true
-        }
-        const scoreHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+HR", required_dt: false, required_hr: true }, order: [["misscount", "asc"]] })
-        const scoreDTHR = await aimScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, mods: "+DTHR", required_dt: true, required_hr: true }, order: [["misscount", "asc"]] })
-        if (scoreNM && scoreHR && !dt) {
+        const scoreNM = await seasonScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, required_mods: 0 }, order: [["misscount", "asc"]] })
+        const scoreDT = await seasonScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, required_mods: 2 }, order: [["misscount", "asc"]] })
+        const scoreHR = await seasonScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, required_mods: 1 }, order: [["misscount", "asc"]] })
+        const scoreDTHR = await seasonScores.findOne({ where: { user_id: userIDs[id].osu_id, map_id: unique[totalMaps].map_id, required_mods: 3 }, order: [["misscount", "asc"]] })
+        if (scoreNM && scoreHR && !scoreDT) {
           totalMaps++;
           if (scoreHR.required_hr) {
-                    total = total + scoreHR.misscount
-                    hrMaps++;
+            total = total + scoreHR.misscount
+            hrMaps++;
           }
           else if (scoreNM.misscount > scoreHR.misscount) {
             total = total + scoreHR.misscount
@@ -69,8 +73,13 @@ async function buildEmbed(toggle) {
           if (scoreNM) {
             totalMaps++;
             total = total + scoreNM.misscount
-            if (dt) { dtMaps++ } else { nmMaps++; }
-          } else if (scoreHR) {
+            nmMaps++;
+          } else if (scoreDT) {
+            totalMaps++;
+            total = total + scoreDT.misscount
+            dtMaps++;
+          }
+          else if (scoreHR) {
             totalMaps++;
             total = total + scoreHR.misscount
             hrMaps++;
@@ -90,7 +99,6 @@ async function buildEmbed(toggle) {
       if (dtMaps > 0) special = special + "/" + dtMaps + " DT"
       special = special + ")"
 
-
       //console.log(userIDs[id].username+": "+nmMaps+"/"+hrMaps)
       const leaderboardMap = {
         username: userIDs[id].username,
@@ -101,16 +109,23 @@ async function buildEmbed(toggle) {
       }
       validUsers.push(leaderboardMap)
       //console.log(leaderboardMap)
-      //console.log(userIDs[id].username + ": NM: " + nmMisscount + "x" + nmAsterik + ", HR: " + hrMisscount + "x" + hrAsterik)
+      //console.log(userIDs[id].username+": NM: "+nmMisscount+"x"+nmAsterik+", HR: "+hrMisscount+"x"+hrAsterik)
       //console.log("maps played: "+mapsPlayed+"; "+scoresNM.length+"/"+scoresHR.length+" NM/HR plays")
     }
   }
-  validUsers.sort(function (user1, user2) {
-    if (user1.mapcount < user2.mapcount) return 1;
-    if (user1.mapcount > user2.mapcount) return -1;
-    if (user1.misscount > user2.misscount) return 1;
-    if (user1.misscount < user2.misscount) return -1;
-  });
+  if (!board) {
+    validUsers.sort(function (user1, user2) {
+      if (user1.mapcount < user2.mapcount) return 1;
+      if (user1.mapcount > user2.mapcount) return -1;
+      if (user1.misscount > user2.misscount) return 1;
+      if (user1.misscount < user2.misscount) return -1;
+    });
+  } else {
+    validUsers.sort(function (user1, user2) {
+      if (user1.misscount < user2.misscount) return 1;
+      if (user1.misscount > user2.misscount) return -1;
+    });
+  }
   for (let i = 0; i < 25; i++) {
     if (i < validUsers.length) {
       const current = validUsers[i];
@@ -127,7 +142,7 @@ async function buildEmbed(toggle) {
     .setAuthor({ name: "Leaderboard for: " + collectionName + "\nCurrent misscount leader: " + validUsers[0].username, iconURL: "https://a.ppy.sh/" + validUsers[0].user_id })
     .setDescription(userString)
     .setColor(lightskyblue)
-    .setFooter({ text: "season theme: "+theme+"\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount" });
+    .setFooter({ text: "season theme: " + theme + "\nlast updated " + d.toUTCString() + "\ncurrent mod: none\ncurrent leaderboard: misscount" });
   //console.log("dfsdf")
   //console.log(scoreEmbed)
   return scoreEmbed;

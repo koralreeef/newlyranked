@@ -24,7 +24,7 @@ async function buildEmbed(maps) {
 module.exports = {
   name: Events.MessageCreate,    
   async execute(message) {
-    const msg = message.content;
+    const msg = '';
     if (regex.test(msg)) {
     const list = await aimLists.findAll({ order: [["collection", "asc"]]})
     let collectionArray = []

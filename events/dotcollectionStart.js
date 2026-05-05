@@ -1,22 +1,22 @@
 const { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { aimLists } = require('../db/dbObjects.js');
+const { currentSeasons } = require('../db/dbObjects.js');
 const { collectionChannel, collectionMessage, currentD1Collection, currentD2Collection, end, the } = require('../config.json');
 const { lightskyblue } = require("color-name");
 let ending = end;
-let theme = "high cs";
+let theme = "none";
 
 async function buildEmbed(toggle) {
   let maps;
   if (!toggle) {
-    maps = await aimLists.findAll({
-      where: { collection: currentD1Collection },
+    maps = await currentSeasons.findAll({
+      where: { division: 1 },
       order: [
         ["map_id", "DESC"],
       ]
     })
   } else {
-    maps = await aimLists.findAll({
-      where: { collection: currentD2Collection },
+    maps = await currentSeasons.findAll({
+      where: { division: 1 },
       order: [
         ["map_id", "DESC"],
       ]
@@ -29,9 +29,9 @@ async function buildEmbed(toggle) {
     for (map in maps) {
         let mods = "";
         current = maps[map];
-        if(current.required_hr) mods = " +HR"
-        if(current.required_dt) mods = " +DT"
-        if(current.required_hr && current.required_dt) mods = " +DTHR"
+        if(current.required_mods == 1) mods = " +HR"
+        if(current.required_mods == 2) mods = " +DT"
+        if(current.required_mods == 3) mods = " +DTHR"
       current = maps[map];
       let ind = Number(map) + 1;
       mapArray = mapArray + ("**" + ind + ": [" + current.artist + " - " + current.title + " [" + current.difficulty + "]](https://osu.ppy.sh/b/" + current.map_id + ")"+mods+"**\n")
