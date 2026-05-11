@@ -257,7 +257,7 @@ module.exports = {
                             leaderboardString = await inputSeasonScore(ppData, score, accuracy, score.mods, message, ppData.details, api, seasonMapFound, modsCounted, modString);
                         }
                     } else {
-                        await inputScore(ppData, score, accuracy, score.mods, message, ppData.details, api);
+                       leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message, ppData.details, api);
                     }
                     const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                     message.channel.send({ content: leaderboardString, embeds: [rsEmbed] });
