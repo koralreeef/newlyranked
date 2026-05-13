@@ -195,7 +195,7 @@ async function calcLazerPP(score, map, total, modString) {
         }
     }
 }
-async function calcPP(score, map, total, modString) {
+async function calcPP(score, map, total, modString, mods) {
     let clockRate = 1;
     let cs = map.cs;
     const hits = {
@@ -204,16 +204,16 @@ async function calcPP(score, map, total, modString) {
         meh: score.statistics.meh ?? 0,
         miss: score.statistics.miss ?? 0,
     }
-    if (modString.includes("DT"))
+    if (mods.includes("DT"))
         clockRate = 1.5;
-    if (modString.includes("HT"))
+    if (mods.includes("HT"))
         clockRate = 0.75;
-    if (modString.includes("HR"))
+    if (mods.includes("HR"))
         cs = hr.cs(cs);
-    if (modString.includes("EZ"))
+    if (mods.includes("EZ"))
         cs = ez.cs(cs);
     const sc = tools.calculate_accuracy(hits, total, 'osu', false);
-    console.log(score);
+    console.log(clockRate);
     const maxAttrs = new rosu.Performance({ mods: modString, lazer: false }).calculate(map);
     const maxPP = (maxAttrs.pp).toFixed(2);
     if (!score.passed) {

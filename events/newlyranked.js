@@ -46,7 +46,7 @@ function findDT(beatmaps) {
   for (let i = 0; i < beatmaps.length; i++) {
     if (
       beatmaps[i].difficultyrating >= 4.3 &&
-      beatmaps[i].difficultyrating.toFixed(2) <= 5.49
+      beatmaps[i].difficultyrating.toFixed(2) <= 5.99
     ) {
       diffMap.set(beatmaps[i].difficultyrating, i);
     }
@@ -145,8 +145,8 @@ module.exports = {
                 mapNM.difficultyrating.toFixed(2),
             );
             // -> \\\* <- LOOKS LIKE SHIT
-            // processes nm/hr stats if star rating > 5.5 else if sr > 4.3 spits out dt
-            if (mapNM.difficultyrating.toFixed(2) > 5.49) {
+            // processes nm/hr stats if star rating > 5.99 else if sr > 4.3 spits out dt
+            if (mapNM.difficultyrating.toFixed(2) > 5.99) {
               nmString =
                 "A new beatmap by **" +
                 mapNM.creator +

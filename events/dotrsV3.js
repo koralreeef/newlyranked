@@ -132,10 +132,7 @@ module.exports = {
                         miss: score.statistics.miss ?? 0,
                     }
                     let total = (hits.ok + hits.great + hits.meh + hits.miss);
-                    ppData = await calcPP(score, map, total, score.mods)
-
-                    //console.log(score);
-                    //console.log(ppData);   
+                    ppData = await calcPP(score, map, total, score.mods, modString)
                     // Free the beatmap manually to avoid risking memory leakage.
                     map.free();
                     fs.unlink("./maps/" + score.beatmap.id + ".osu", function (err) {
@@ -253,7 +250,6 @@ module.exports = {
                         let mods = false;
                         if(seasonMapFound.required_mods == 0 && modsCounted < 2) mods = true;
                         if ((seasonMapFound.required_mods == modsCounted || mods) && progress == '') {
-                            console.log('yay');
                             leaderboardString = await inputSeasonScore(ppData, score, accuracy, score.mods, message, ppData.details, api, seasonMapFound, modsCounted, modString);
                         }
                     } else {
