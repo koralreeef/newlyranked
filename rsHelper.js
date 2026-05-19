@@ -215,6 +215,7 @@ async function calcPP(score, map, total, modString, mods) {
     const sc = tools.calculate_accuracy(hits, total, 'osu', false);
     console.log(clockRate);
     const maxAttrs = new rosu.Performance({ mods: modString, lazer: false }).calculate(map);
+    console.log(maxAttrs);
     const maxPP = (maxAttrs.pp).toFixed(2);
     if (!score.passed) {
         const difficulty = new rosu.Difficulty({
@@ -240,11 +241,16 @@ async function calcPP(score, map, total, modString, mods) {
         const fcPP = (FCAttrs.pp).toFixed(2);
         return { stats: maxAttrs, currPP: currentPP, fcPP: fcPP, maxPP: maxPP, accuracy: sc.accuracy, clockRate: clockRate, cs: cs }
     } else {
+        console.log(sc.accuracy);
+        console.log(hits);
+        console.log(total);
+        console.log(score);
         const currAttrs = new rosu.Performance({
             mods: modString, // Must be the same as before in order to use the previous attributes!
             misses: score.statistics.miss,
             lazer: false,
             accuracy: sc.accuracy,
+            legacy_total_score: score.legacy_total_score,
             combo: score.max_combo,
         }).calculate(maxAttrs);
         const FCAttrs = new rosu.Performance({

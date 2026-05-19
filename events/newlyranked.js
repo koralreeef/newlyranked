@@ -45,7 +45,7 @@ function findDT(beatmaps) {
   let diffMap = new Map();
   for (let i = 0; i < beatmaps.length; i++) {
     if (
-      beatmaps[i].difficultyrating >= 4.3 &&
+      beatmaps[i].difficultyrating >= 4.8 &&
       beatmaps[i].difficultyrating.toFixed(2) <= 5.99
     ) {
       diffMap.set(beatmaps[i].difficultyrating, i);

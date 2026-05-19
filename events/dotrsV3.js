@@ -90,13 +90,22 @@ module.exports = {
             } catch (err) {
                 return message.channel.send("no score found or something went wrong (ping koral)");
             }
+
             if (scores.length > 0) {
                 let score = scores[0];
                 let modsCounted = 0;
+                let globalTopIndex = 0;
                 let modArray = [];
                 let modString = '';
                 try {
-                    //console.log(score.type);
+                    const res = await axios.get("https://osu.ppy.sh/api/get_scores?k=" + AccessToken + "&b=" + score.beatmap_id + "&limit=50");
+                    for (const scores in res.data) {
+                        //console.log(res.data[scores].username)
+                        if (res.data[scores].score == score.legacy_total_score) {
+                            console.log(score.user.username + " rank: " + (Number(scores) + 1));
+                            globalTopIndex = Number(scores) + 1;
+                        }
+                    }
                     for (const mod in score.mods) {
                         const singleMod = score.mods[mod].acronym;
                         console.log(singleMod);
@@ -112,7 +121,7 @@ module.exports = {
                     }
                     modArray.reverse().flat();
                     modString = "+" + modArray.toString().replaceAll(',', '');
-                    if(modString == "+") modString = "+NM";
+                    if (modString == "+") modString = "+NM";
                     const result = await tools.download_beatmaps({
                         type: 'difficulty',
                         host: 'osu',
@@ -149,7 +158,6 @@ module.exports = {
                     let foundPP = false;
                     let foundTop = false;
                     let foundModTop = false;
-                    let globalTopIndex = 0;
                     let modIndex = 0;
                     const mods = ppData.lazerMods ?? modString;
                     const best = await v2.scores.list({
@@ -160,26 +168,6 @@ module.exports = {
                         user_id: user.id,
                     });
                     if (beatmap.status != "graveyard" && beatmap.status != "wip" && beatmap.status != "pending") {
-                        const res = await axios.get("https://osu.ppy.sh/api/get_scores?k=" + AccessToken + "&b=" + score.beatmap.id + "&limit=50");
-                        global = res.data;
-                        global.reverse();
-                        //console.log(res.data)
-                        if (score.score == global[global.length - 1].score) {
-                            //console.log(score.score);
-                            globalTopIndex = 1;
-                        }
-                        else if (score.score < global[0].score) {
-                            console.log(score.score + " < " + global[0].score);
-                            globalTopIndex = 0;
-                        } else {
-                            for (let i in global) {
-                                if (global[i].score > score.score && foundTop == false) {
-                                    globalTopIndex = Math.abs(Number(i) - global.length - 1);
-                                    //console.log(global[i].score+" "+score.score);
-                                    foundTop = true;
-                                }
-                            }
-                        }
                         let enumSum = 0;
 
                         //there has to be a better way
@@ -195,27 +183,16 @@ module.exports = {
                             enumSum = enumSum + 2;
                         if (modArray.includes("SD"))
                             enumSum = enumSum + 32;
-
+                        console.log(enumSum);
                         const res2 = await axios.get("https://osu.ppy.sh/api/get_scores?k=" + AccessToken + "&b=" + beatmap.id + "&mods=" + enumSum + "&limit=100");
                         const modscores = res2.data;
-                        //console.log(modscores);
                         //CATCHING SD LEADERBOARDS WOW
-                        if (modscores.length > 0) {
-                            modscores.reverse();
-                            if (score.score == modscores[modscores.length - 1].score) {
-                                //console.log(score.score);
-                                modIndex = 1;
-                            }
-                            else if (score.score < modscores[0].score) {
-                                console.log(score.score + " < " + modscores[0].score);
-                                modIndex = 0;
-                            } else {
-                                for (let i in modscores) {
-                                    if (modscores[i].score > score.score && foundModTop == false) {
-                                        modIndex = Math.abs(Number(i) - modscores.length - 1);
-                                        //console.log(global[i].score+" "+score.score);
-                                        foundModTop = true;
-                                    }
+                        if (score.passed) {
+                            for (const scores in res2.data) {
+                                //console.log(res.data[scores].username)
+                                if (res2.data[scores].score == score.legacy_total_score) {
+                                    console.log(score.user.username + " rank: " + (Number(scores) + 1));
+                                    modIndex = Number(scores) + 1;
                                 }
                             }
                         }
@@ -248,12 +225,12 @@ module.exports = {
                     let leaderboardString = '';
                     if (seasonMapFound) {
                         let mods = false;
-                        if(seasonMapFound.required_mods == 0 && modsCounted < 2) mods = true;
+                        if (seasonMapFound.required_mods == 0 && modsCounted < 2) mods = true;
                         if ((seasonMapFound.required_mods == modsCounted || mods) && progress == '') {
                             leaderboardString = await inputSeasonScore(ppData, score, accuracy, score.mods, message, ppData.details, api, seasonMapFound, modsCounted, modString);
                         }
                     } else {
-                       leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message, ppData.details, api);
+                        leaderboardString = await inputScore(ppData, score, accuracy, score.mods, message, ppData.details, api);
                     }
                     const rsEmbed = await generateRs(beatmap, ppData, beatmapset, user, progress, mods, score, accuracy, clockRate, cs, topPlayIndex, globalTopIndex, modIndex);
                     message.channel.send({ content: leaderboardString, embeds: [rsEmbed] });
